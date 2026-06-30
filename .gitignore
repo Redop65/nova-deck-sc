@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+pytest-cache-files-*/
+.test-tmp/
+tests/_buttons_*_test.json
+*.py[cod]
+.idea/
+.vscode/

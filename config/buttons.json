@@ -1,0 +1,221 @@
+{
+  "title": "NOVA DECK // SC",
+  "pages": [
+    {
+      "id": "flight",
+      "name": "Flight",
+      "icon": "◇",
+      "buttons": [
+        {
+          "id": "landing-gear",
+          "name": "Landing Gear",
+          "icon": "LG",
+          "keys": "N",
+          "color": "cyan"
+        },
+        {
+          "id": "quantum-drive",
+          "name": "Quantum Drive",
+          "icon": "QT",
+          "keys": "B",
+          "color": "violet",
+          "hold_ms": 1000
+        },
+        {
+          "id": "lights",
+          "name": "Lights",
+          "icon": "LUX",
+          "keys": "L",
+          "color": "amber"
+        },
+        {
+          "id": "decouple",
+          "name": "Decouple",
+          "icon": "DC",
+          "keys": "C",
+          "color": "orange"
+        },
+        {
+          "id": "wing-configuration",
+          "name": "Extend / Retract Wings",
+          "icon": "WNG",
+          "keys": "Alt+K",
+          "color": "green"
+        },
+        {
+          "id": "open-all-doors",
+          "name": "Open All Doors",
+          "keys": "F9",
+          "color": "amber",
+          "icon": "DOOR",
+          "disabled": false
+        },
+        {
+          "id": "landing",
+          "name": "Landing",
+          "keys": "Alt+N",
+          "color": "orange",
+          "icon": "LANDING",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "mobiglas",
+      "name": "MobiGlas",
+      "icon": "◎",
+      "buttons": [
+        {
+          "id": "mobiglas-open",
+          "name": "Open MobiGlas",
+          "icon": "MG",
+          "keys": "F1",
+          "color": "cyan"
+        },
+        {
+          "id": "star-map",
+          "name": "Star Map",
+          "icon": "MAP",
+          "keys": "F2",
+          "color": "blue"
+        },
+        {
+          "id": "comunicacion",
+          "name": "Comunicacion",
+          "keys": "F11",
+          "color": "cyan",
+          "icon": "COM",
+          "disabled": false
+        },
+        {
+          "id": "chat",
+          "name": "Chat",
+          "keys": "F12",
+          "color": "green",
+          "icon": "CHAT",
+          "disabled": false
+        }
+      ]
+    },
+    {
+      "id": "combat",
+      "name": "Combat",
+      "icon": "△",
+      "buttons": [
+        {
+          "id": "target-nearest",
+          "name": "Target Nearest",
+          "icon": "TGT",
+          "keys": "T",
+          "color": "red"
+        },
+        {
+          "id": "countermeasures",
+          "name": "Countermeasures",
+          "icon": "CM",
+          "keys": "H",
+          "color": "amber"
+        },
+        {
+          "id": "missile-mode",
+          "name": "Missile Mode",
+          "icon": "MSL",
+          "keys": "Mouse4",
+          "color": "red",
+          "disabled": true
+        }
+      ]
+    },
+    {
+      "id": "mining",
+      "name": "Mining",
+      "icon": "⬡",
+      "buttons": [
+        {
+          "id": "mining-mode",
+          "name": "Mining Mode",
+          "icon": "MNG",
+          "keys": "M",
+          "color": "orange"
+        },
+        {
+          "id": "scan",
+          "name": "Scan",
+          "icon": "SCN",
+          "keys": "V",
+          "color": "cyan"
+        },
+        {
+          "id": "mining-power-up",
+          "name": "Increase Power",
+          "icon": "+PWR",
+          "keys": "PageUp",
+          "color": "red"
+        },
+        {
+          "id": "mining-power-down",
+          "name": "Decrease Power",
+          "icon": "-PWR",
+          "keys": "PageDown",
+          "color": "green"
+        },
+        {
+          "id": "extraction-mode",
+          "name": "Extraction Mode",
+          "icon": "EXT",
+          "keys": "M",
+          "color": "violet"
+        }
+      ]
+    },
+    {
+      "id": "fps",
+      "name": "FPS",
+      "icon": "⌖",
+      "buttons": [
+        {
+          "id": "inventory",
+          "name": "Inventory",
+          "icon": "INV",
+          "keys": "I",
+          "color": "blue"
+        },
+        {
+          "id": "flashlight",
+          "name": "Flashlight",
+          "icon": "LUX",
+          "keys": "T",
+          "color": "amber"
+        },
+        {
+          "id": "medpen",
+          "name": "MedPen",
+          "icon": "MED",
+          "keys": "C",
+          "color": "green"
+        }
+      ]
+    },
+    {
+      "id": "camera-obs",
+      "name": "Camera / OBS",
+      "icon": "◉",
+      "buttons": [
+        {
+          "id": "toggle-camera",
+          "name": "Toggle Camera",
+          "icon": "CAM",
+          "keys": "F4",
+          "color": "violet"
+        },
+        {
+          "id": "obs-record",
+          "name": "Start / Stop OBS",
+          "icon": "REC",
+          "keys": "Ctrl+F12",
+          "color": "red"
+        }
+      ]
+    }
+  ]
+}
