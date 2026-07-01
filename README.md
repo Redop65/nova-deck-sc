@@ -143,3 +143,4 @@ La documentación interactiva de la API queda disponible localmente en `http://l
 - **La web responde pero el juego no:** enfoca el juego, comprueba el binding y revisa que juego y servidor tengan el mismo nivel de privilegio.
 - **Error de configuración:** valida comas, comillas e IDs únicos en `config/buttons.json`; el detalle aparecerá en la interfaz/API.
 - **El puerto está ocupado:** cambia `8765` en `start.bat` y usa ese mismo puerto en la URL del celular.
+- **`activate.bat` no se reconoce:** descarga la versión más reciente del repositorio y vuelve a ejecutar `install.bat`. El instalador reparará un `.venv` incompleto y nunca continuará instalando dependencias globalmente. Si Python de Microsoft Store no logra crear el entorno, instala Python 3.12 desde python.org con **Add python.exe to PATH** habilitado.
