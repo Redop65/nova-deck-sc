@@ -1,0 +1,13 @@
+{
+  "app": {
+    "debug": false,
+    "log_level": "INFO"
+  },
+  "obs": {
+    "enabled": false,
+    "host": "127.0.0.1",
+    "port": 4455,
+    "password": "",
+    "timeout_seconds": 3
+  }
+}

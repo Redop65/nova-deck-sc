@@ -1,10 +1,15 @@
-const state = { pages: [], activePage: null, forceTestMode: false, editingId: null };
+const state = {
+  profiles: [], activeProfile: "default", pages: [], activePage: null,
+  forceTestMode: false, editingId: null, configWarnings: [],
+};
 const colors = new Set(["cyan", "blue", "violet", "amber", "orange", "green", "red"]);
+const customIconPattern = /^assets\/icons\/[A-Za-z0-9][A-Za-z0-9._-]*\.(svg|png|webp|jpe?g)$/i;
 
 const grid = document.querySelector("#button-grid");
 const nav = document.querySelector("#page-nav");
 const title = document.querySelector("#page-title");
 const testToggle = document.querySelector("#test-mode");
+const profileSelect = document.querySelector("#profile-select");
 const log = document.querySelector("#command-log");
 const logText = document.querySelector("#log-text");
 const toast = document.querySelector("#toast");
@@ -23,12 +28,26 @@ deleteButton.addEventListener("click", () => { deleteConfirm.hidden = false; });
 document.querySelector("#cancel-delete").addEventListener("click", () => { deleteConfirm.hidden = true; });
 document.querySelector("#confirm-delete").addEventListener("click", deleteCurrentButton);
 buttonForm.addEventListener("submit", saveButton);
+document.querySelector("#field-type").addEventListener("change", updateActionFields);
 document.querySelector("#field-name").addEventListener("input", (event) => {
   const idField = document.querySelector("#field-id");
   if (state.editingId === null && !idField.dataset.manual) idField.value = slugify(event.target.value);
 });
 document.querySelector("#field-id").addEventListener("input", (event) => {
   event.target.dataset.manual = event.target.value ? "true" : "";
+});
+profileSelect.addEventListener("change", async () => {
+  const previous = state.activeProfile;
+  profileSelect.disabled = true;
+  try {
+    await loadProfile(profileSelect.value);
+    writeLog(`PROFILE LOADED // ${profileSelect.options[profileSelect.selectedIndex].text.toUpperCase()}`);
+  } catch (error) {
+    profileSelect.value = previous;
+    showToast(error.message);
+  } finally {
+    profileSelect.disabled = false;
+  }
 });
 
 testToggle.checked = localStorage.getItem("nova-deck-test") === "true";
@@ -67,6 +86,36 @@ function renderNav() {
   }));
 }
 
+function renderProfileOptions() {
+  profileSelect.replaceChildren(...state.profiles.map((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.name;
+    option.selected = profile.id === state.activeProfile;
+    return option;
+  }));
+}
+
+async function loadProfile(profileId) {
+  const result = await requestJson(`/api/profiles/${encodeURIComponent(profileId)}`);
+  state.activeProfile = result.profile.id;
+  state.pages = result.profile.pages;
+  state.activePage = state.pages[0]?.id || null;
+  state.editingId = null;
+  state.configWarnings = result.warnings || [];
+  localStorage.setItem("nova-deck-profile", state.activeProfile);
+  renderProfileOptions();
+  if (state.activePage) selectPage(state.activePage);
+  showConfigurationWarnings();
+}
+
+function showConfigurationWarnings() {
+  if (!state.configWarnings.length) return;
+  const first = state.configWarnings[0];
+  writeLog(`CONFIG WARNING // ${first.path} // ${first.message}`, "warning");
+  showToast(`${state.configWarnings.length} botón(es) con error; fueron deshabilitados.`);
+}
+
 function selectPage(pageId) {
   state.activePage = pageId;
   const page = state.pages.find((item) => item.id === pageId);
@@ -91,6 +140,17 @@ function setEditorMode(enabled) {
 function slugify(value) {
   return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function actionType(item = {}) {
+  return item.type || (item.macro ? "macro" : "hotkey");
+}
+
+function updateActionFields() {
+  const type = document.querySelector("#field-type").value;
+  document.querySelector(".hotkey-option").hidden = type !== "hotkey";
+  document.querySelector('[data-action="macro"]').hidden = type !== "macro";
+  document.querySelector('[data-action="obs"]').hidden = type !== "obs";
 }
 
 function populatePageSelect(selectedPage) {
@@ -119,7 +179,7 @@ function renderEditorList() {
       const name = document.createElement("span");
       name.textContent = item.name;
       const keys = document.createElement("code");
-      keys.textContent = item.keys;
+      keys.textContent = item._config_error ? "CONFIG ERROR" : (actionType(item) === "obs" ? `OBS · ${item.obsAction}` : (item.macro ? `MACRO ×${item.macro.length}` : item.keys));
       row.append(name, keys);
       row.addEventListener("click", () => editButton(page.id, item));
       group.append(row);
@@ -131,6 +191,8 @@ function renderEditorList() {
 function startNewButton() {
   state.editingId = null;
   buttonForm.reset();
+  document.querySelector("#field-type").value = "hotkey";
+  updateActionFields();
   document.querySelector("#field-id").dataset.manual = "";
   populatePageSelect(state.activePage || state.pages[0]?.id);
   document.querySelector("#form-title").textContent = "New Button";
@@ -147,11 +209,21 @@ function editButton(pageId, item) {
   document.querySelector("#field-name").value = item.name;
   document.querySelector("#field-id").value = item.id;
   document.querySelector("#field-id").dataset.manual = "true";
-  document.querySelector("#field-keys").value = item.keys;
+  document.querySelector("#field-keys").value = item.keys || "";
+  document.querySelector("#field-type").value = actionType(item);
   document.querySelector("#field-hold").value = Number(item.hold_ms) || 0;
+  document.querySelector("#field-macro").value = item.macro
+    ? JSON.stringify(item.macro, null, 2)
+    : "";
   document.querySelector("#field-icon").value = item.icon || "";
   document.querySelector("#field-color").value = colors.has(item.color) ? item.color : "cyan";
   document.querySelector("#field-disabled").checked = Boolean(item.disabled);
+  document.querySelector("#field-obs-action").value = item.obsAction || "toggle_recording";
+  document.querySelector("#field-scene-name").value = item.sceneName || "";
+  document.querySelector("#field-input-name").value = item.inputName || "";
+  document.querySelector("#field-source-name").value = item.sourceName || "";
+  document.querySelector("#field-visible").value = String(item.visible ?? true);
+  updateActionFields();
   populatePageSelect(pageId);
   document.querySelector("#form-title").textContent = item.name;
   document.querySelector("#form-state").textContent = "EDITING";
@@ -162,13 +234,28 @@ function editButton(pageId, item) {
 }
 
 function formPayload() {
+  const type = document.querySelector("#field-type").value;
   const icon = document.querySelector("#field-icon").value.trim();
+  const macroText = document.querySelector("#field-macro").value.trim();
+  let macro = null;
+  if (type === "macro" && macroText) {
+    macro = JSON.parse(macroText);
+    if (!Array.isArray(macro)) throw new Error("Macro JSON must be an array of steps.");
+  }
   return {
+    profile_id: state.activeProfile,
     page_id: document.querySelector("#field-page").value,
     button: {
       id: document.querySelector("#field-id").value.trim(),
       name: document.querySelector("#field-name").value.trim(),
-      keys: document.querySelector("#field-keys").value.trim(),
+      type,
+      keys: type === "hotkey" ? document.querySelector("#field-keys").value.trim() : null,
+      macro: type === "macro" ? macro : null,
+      obsAction: type === "obs" ? document.querySelector("#field-obs-action").value : null,
+      sceneName: type === "obs" ? document.querySelector("#field-scene-name").value.trim() || null : null,
+      inputName: type === "obs" ? document.querySelector("#field-input-name").value.trim() || null : null,
+      sourceName: type === "obs" ? document.querySelector("#field-source-name").value.trim() || null : null,
+      visible: type === "obs" ? document.querySelector("#field-visible").value === "true" : null,
       hold_ms: Number.parseInt(document.querySelector("#field-hold").value, 10) || 0,
       icon: icon || null,
       color: document.querySelector("#field-color").value,
@@ -178,8 +265,19 @@ function formPayload() {
 }
 
 async function requestJson(url, options = {}) {
-  const response = await fetch(url, options);
-  const body = await response.json();
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (error) {
+    throw new Error(`No se pudo conectar con el servidor: ${error.message}`);
+  }
+  const raw = await response.text();
+  let body = {};
+  try {
+    body = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(`El servidor respondió con un formato inesperado (HTTP ${response.status}).`);
+  }
   if (!response.ok) {
     const detail = Array.isArray(body.detail) ? body.detail.map((item) => item.msg).join("; ") : body.detail;
     throw new Error(detail || `HTTP ${response.status}`);
@@ -188,21 +286,23 @@ async function requestJson(url, options = {}) {
 }
 
 async function reloadConfiguration() {
-  const config = await requestJson("/api/buttons");
-  state.pages = config.pages;
+  const config = await requestJson(`/api/profiles/${encodeURIComponent(state.activeProfile)}`);
+  state.pages = config.profile.pages;
+  state.configWarnings = config.warnings || [];
   if (!state.pages.some((page) => page.id === state.activePage)) state.activePage = state.pages[0].id;
   selectPage(state.activePage);
   renderEditorList();
+  showConfigurationWarnings();
 }
 
 async function saveButton(event) {
   event.preventDefault();
-  const payload = formPayload();
   const originalId = state.editingId;
   const url = originalId === null ? "/api/buttons" : `/api/buttons/${encodeURIComponent(originalId)}`;
   const method = originalId === null ? "POST" : "PUT";
   setFormMessage("SAVING // WRITING CONFIG...", "");
   try {
+    const payload = formPayload();
     const result = await requestJson(url, {
       method,
       headers: { "Content-Type": "application/json" },
@@ -224,7 +324,10 @@ async function deleteCurrentButton() {
   if (state.editingId === null) return;
   const id = state.editingId;
   try {
-    await requestJson(`/api/buttons/${encodeURIComponent(id)}`, { method: "DELETE" });
+    await requestJson(
+      `/api/buttons/${encodeURIComponent(id)}?profile_id=${encodeURIComponent(state.activeProfile)}`,
+      { method: "DELETE" },
+    );
     state.editingId = null;
     await reloadConfiguration();
     startNewButton();
@@ -248,11 +351,31 @@ function createDeckButton(item, index) {
   button.type = "button";
   button.disabled = Boolean(item.disabled);
   button.dataset.index = String(index + 1).padStart(2, "0");
-  button.title = item.disabled ? "Configura una tecla válida para habilitar esta acción" : item.name;
+  button.title = item._config_error || (item.disabled ? "Configura una acción válida para habilitar este botón" : item.name);
 
-  const icon = document.createElement("span");
-  icon.className = "key-icon";
-  icon.textContent = item.icon || "◇";
+  let icon = null;
+  if (customIconPattern.test(item.icon || "")) {
+    icon = document.createElement("span");
+    icon.className = "key-icon custom-icon";
+    const image = document.createElement("img");
+    image.src = `/${item.icon}`;
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    image.addEventListener("error", () => {
+      icon?.remove();
+      button.classList.remove("has-image");
+      button.classList.add("no-icon");
+    }, { once: true });
+    icon.append(image);
+    button.classList.add("has-image");
+  } else if (item.icon) {
+    icon = document.createElement("span");
+    icon.className = "key-icon";
+    icon.textContent = item.icon;
+    button.classList.add("has-symbol");
+  } else {
+    button.classList.add("no-icon");
+  }
   const name = document.createElement("span");
   name.className = "key-name";
   name.textContent = item.name;
@@ -260,8 +383,10 @@ function createDeckButton(item, index) {
   binding.className = "key-binding";
   const holdMs = Number(item.hold_ms) || 0;
   const holdLabel = holdMs > 0 ? ` · HOLD ${(holdMs / 1000).toFixed(1)}S` : "";
-  binding.textContent = item.disabled ? `${item.keys} // DISABLED` : `${item.keys}${holdLabel}`;
-  button.append(icon, name, binding);
+  const actionLabel = item._config_error ? "CONFIG ERROR" : (actionType(item) === "obs" ? `OBS · ${item.obsAction}` : (item.macro ? `MACRO · ${item.macro.length} STEPS` : `${item.keys}${holdLabel}`));
+  binding.textContent = item.disabled ? `${actionLabel} // DISABLED` : actionLabel;
+  if (icon) button.append(icon);
+  button.append(name, binding);
   button.addEventListener("click", () => sendCommand(item, button));
   return button;
 }
@@ -269,18 +394,30 @@ function createDeckButton(item, index) {
 async function sendCommand(item, element) {
   element.classList.add("firing");
   navigator.vibrate?.(25);
-  writeLog(`TX // ${item.name.toUpperCase()} [${item.keys}]`);
+  const outgoing = actionType(item) === "obs" ? `OBS · ${item.obsAction}` : (item.macro ? `MACRO ×${item.macro.length}` : item.keys);
+  writeLog(`TX // ${item.name.toUpperCase()} [${outgoing}]`);
   try {
     const response = await fetch("/api/commands", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ button_id: item.id, test_mode: testToggle.checked }),
+      body: JSON.stringify({
+        profile_id: state.activeProfile,
+        button_id: item.id,
+        test_mode: testToggle.checked,
+      }),
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
     const mode = body.test_mode ? "SIMULATED" : "SENT";
-    const hold = body.hold_ms > 0 ? ` // HOLD ${body.hold_ms}MS` : "";
-    writeLog(`ACK // ${body.button.toUpperCase()} // ${body.keys}${hold} // ${mode}`, "success");
+    if (body.action_type === "macro") {
+      writeLog(`ACK // ${body.button.toUpperCase()} // MACRO ${body.steps} STEPS // ${mode}`, "success");
+    } else if (body.action_type === "obs") {
+      writeLog(`ACK // ${body.button.toUpperCase()} // OBS ${body.obs_action} // ${mode}`, "success");
+      showToast(`OBS: ${body.button} // ${mode}`);
+    } else {
+      const hold = body.hold_ms > 0 ? ` // HOLD ${body.hold_ms}MS` : "";
+      writeLog(`ACK // ${body.button.toUpperCase()} // ${body.keys}${hold} // ${mode}`, "success");
+    }
   } catch (error) {
     writeLog(`ERROR // ${error.message}`, "error");
     showToast(error.message);
@@ -291,11 +428,8 @@ async function sendCommand(item, element) {
 
 async function boot() {
   try {
-    const [buttonsResponse, statusResponse] = await Promise.all([fetch("/api/buttons"), fetch("/api/status")]);
-    if (!buttonsResponse.ok || !statusResponse.ok) throw new Error("El servidor no respondió correctamente.");
-    const config = await buttonsResponse.json();
-    const status = await statusResponse.json();
-    state.pages = config.pages;
+    const [config, status] = await Promise.all([requestJson("/api/profiles"), requestJson("/api/status")]);
+    state.profiles = config.profiles;
     state.forceTestMode = status.force_test_mode;
     document.querySelector("#deck-title").textContent = config.title || "NOVA DECK // SC";
     if (state.forceTestMode) {
@@ -304,7 +438,13 @@ async function boot() {
       writeLog("SERVER TEST MODE // KEY OUTPUT HARD-LOCKED");
     }
     setConnection("online", state.forceTestMode ? "TEST LOCK" : "SYSTEM ONLINE");
-    selectPage(state.pages[0].id);
+    if (!status.configuration?.ok) throw new Error(`Configuración inválida: ${status.configuration?.error || "error desconocido"}`);
+    const savedProfile = localStorage.getItem("nova-deck-profile");
+    const initialProfile = state.profiles.some((profile) => profile.id === savedProfile)
+      ? savedProfile
+      : (state.profiles.find((profile) => profile.id === "default")?.id || state.profiles[0]?.id);
+    if (!initialProfile) throw new Error("No hay perfiles configurados.");
+    await loadProfile(initialProfile);
   } catch (error) {
     setConnection("error", "OFFLINE");
     writeLog(`BOOT ERROR // ${error.message}`, "error");

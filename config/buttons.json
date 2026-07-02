@@ -1,6 +1,10 @@
 {
   "title": "NOVA DECK // SC",
-  "pages": [
+  "profiles": [
+    {
+      "id": "default",
+      "name": "Default",
+      "pages": [
     {
       "id": "flight",
       "name": "Flight",
@@ -9,14 +13,14 @@
         {
           "id": "landing-gear",
           "name": "Landing Gear",
-          "icon": "LG",
+          "icon": "assets/icons/landing-gear.svg",
           "keys": "N",
           "color": "cyan"
         },
         {
           "id": "quantum-drive",
           "name": "Quantum Drive",
-          "icon": "QT",
+          "icon": "assets/icons/quantum.svg",
           "keys": "B",
           "color": "violet",
           "hold_ms": 1000
@@ -68,16 +72,31 @@
         {
           "id": "mobiglas-open",
           "name": "Open MobiGlas",
-          "icon": "MG",
+          "icon": "assets/icons/mobiglas.svg",
           "keys": "F1",
           "color": "cyan"
         },
         {
           "id": "star-map",
           "name": "Star Map",
-          "icon": "MAP",
+          "icon": "assets/icons/star-map.svg",
           "keys": "F2",
           "color": "blue"
+        },
+        {
+          "id": "mobiglas-to-map",
+          "name": "MobiGlas → Star Map",
+          "icon": "NAV",
+          "color": "violet",
+          "macro": [
+            {
+              "keys": "F1",
+              "delay_after_ms": 500
+            },
+            {
+              "keys": "F2"
+            }
+          ]
         },
         {
           "id": "comunicacion",
@@ -210,10 +229,97 @@
         },
         {
           "id": "obs-record",
-          "name": "Start / Stop OBS",
-          "icon": "REC",
-          "keys": "Ctrl+F12",
+          "name": "REC",
+          "type": "obs",
+          "obsAction": "toggle_recording",
+          "icon": "assets/icons/record.svg",
           "color": "red"
+        },
+        {
+          "id": "obs-pause",
+          "name": "Pause REC",
+          "type": "obs",
+          "obsAction": "pause_recording",
+          "icon": "assets/icons/pause.svg",
+          "color": "amber"
+        },
+        {
+          "id": "obs-cockpit-scene",
+          "name": "Cockpit Cam",
+          "type": "obs",
+          "obsAction": "set_scene",
+          "sceneName": "Star Citizen - Cockpit",
+          "icon": "assets/icons/camera.svg",
+          "color": "violet"
+        },
+        {
+          "id": "obs-mute-mic",
+          "name": "Mute Mic",
+          "type": "obs",
+          "obsAction": "toggle_mute",
+          "inputName": "Mic/Aux",
+          "icon": "assets/icons/mic.svg",
+          "color": "orange"
+        }
+      ]
+    }
+      ]
+    },
+    {
+      "id": "prospector",
+      "name": "Prospector",
+      "pages": [
+        {
+          "id": "flight",
+          "name": "Flight",
+          "icon": "◇",
+          "buttons": [
+            {"id": "landing-gear", "name": "Landing Gear", "keys": "N", "color": "cyan", "icon": "assets/icons/landing-gear.svg"},
+            {"id": "quantum-drive", "name": "Quantum Drive", "keys": "B", "hold_ms": 1000, "color": "violet", "icon": "assets/icons/quantum.svg"},
+            {"id": "lights", "name": "Lights", "keys": "L", "color": "amber", "icon": "LUX"},
+            {"id": "decouple", "name": "Decouple", "keys": "C", "color": "orange", "icon": "DC"}
+          ]
+        },
+        {
+          "id": "mining",
+          "name": "Mining",
+          "icon": "⬡",
+          "buttons": [
+            {"id": "mining-mode", "name": "Mining Mode", "keys": "M", "color": "orange", "icon": "assets/icons/mining.svg"},
+            {"id": "scan", "name": "Scan", "keys": "V", "color": "cyan", "icon": "SCN"},
+            {"id": "mining-power-up", "name": "Increase Power", "keys": "PageUp", "color": "red", "icon": "+PWR"},
+            {"id": "mining-power-down", "name": "Decrease Power", "keys": "PageDown", "color": "green", "icon": "-PWR"},
+            {"id": "extraction-mode", "name": "Extraction Mode", "keys": "M", "color": "violet", "icon": "EXT"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vulture",
+      "name": "Vulture",
+      "pages": [
+        {
+          "id": "flight",
+          "name": "Flight",
+          "icon": "◇",
+          "buttons": [
+            {"id": "landing-gear", "name": "Landing Gear", "keys": "N", "color": "cyan", "icon": "assets/icons/landing-gear.svg"},
+            {"id": "quantum-drive", "name": "Quantum Drive", "keys": "B", "hold_ms": 1000, "color": "violet", "icon": "assets/icons/quantum.svg"},
+            {"id": "lights", "name": "Lights", "keys": "L", "color": "amber", "icon": "LUX"},
+            {"id": "open-all-doors", "name": "Open All Doors", "keys": "F9", "color": "amber", "icon": "DOOR"}
+          ]
+        },
+        {
+          "id": "salvage",
+          "name": "Salvaging",
+          "icon": "S",
+          "buttons": [
+            {"id": "salvage-mode", "name": "Salvage Mode", "keys": "M", "color": "orange", "icon": "assets/icons/salvage.svg"},
+            {"id": "scan", "name": "Scan", "keys": "V", "color": "cyan", "icon": "SCN"},
+            {"id": "salvage-power-up", "name": "Increase Beam Power", "keys": "PageUp", "color": "red", "icon": "+PWR"},
+            {"id": "salvage-power-down", "name": "Decrease Beam Power", "keys": "PageDown", "color": "green", "icon": "-PWR"},
+            {"id": "fracture-mode", "name": "Fracture Mode", "keys": "F8", "color": "violet", "icon": "FRC", "disabled": true}
+          ]
         }
       ]
     }

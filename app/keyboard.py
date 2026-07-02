@@ -65,6 +65,20 @@ class KeyboardSender:
         self._lock = Lock()
 
     def send(self, combo: str, hold_ms: int = 0) -> None:
+        with self._lock:
+            self._send_locked(combo, hold_ms)
+
+    def send_sequence(self, steps: list[dict]) -> None:
+        with self._lock:
+            for index, step in enumerate(steps):
+                self._send_locked(step["keys"], int(step.get("hold_ms", 0)))
+                if index < len(steps) - 1:
+                    delay_ms = int(step.get("delay_after_ms", 0))
+                    if delay_ms > 0:
+                        sleep(delay_ms / 1000)
+
+    @staticmethod
+    def _send_locked(combo: str, hold_ms: int = 0) -> None:
         parsed = parse_combo(combo)
         try:
             from pynput.keyboard import Controller, Key
@@ -83,14 +97,13 @@ class KeyboardSender:
 
         keyboard = Controller()
         pressed = []
-        with self._lock:
-            try:
-                for index, key in enumerate(keys):
-                    keyboard.press(key)
-                    pressed.append(key)
-                    if index < len(keys) - 1:
-                        sleep(0.025)
-                sleep(max(0.025, hold_ms / 1000))
-            finally:
-                for key in reversed(pressed):
-                    keyboard.release(key)
+        try:
+            for index, key in enumerate(keys):
+                keyboard.press(key)
+                pressed.append(key)
+                if index < len(keys) - 1:
+                    sleep(0.025)
+            sleep(max(0.025, hold_ms / 1000))
+        finally:
+            for key in reversed(pressed):
+                keyboard.release(key)
