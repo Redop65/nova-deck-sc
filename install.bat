@@ -32,6 +32,11 @@ if not exist "%VENV_PY%" (
 
 if not exist "%VENV_PY%" goto :venv_error
 
+if not exist "config\settings.json" (
+  copy /Y "config\settings.example.json" "config\settings.json" >nul
+  echo Creado config\settings.json desde la plantilla segura.
+)
+
 echo Instalando dependencias dentro de .venv...
 "%VENV_PY%" -m pip install --upgrade pip
 if errorlevel 1 goto :dependency_error

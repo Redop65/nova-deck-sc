@@ -24,11 +24,17 @@
     <section id="deck-view">
       <section class="mode-header">
         <div><small>ACTIVE MODULE</small><h1 id="page-title">—</h1></div>
-        <label class="test-switch">
-          <input id="test-mode" type="checkbox">
-          <span class="switch-track"><span></span></span>
-          <span><strong>TEST MODE</strong><small>NO KEY OUTPUT</small></span>
-        </label>
+        <div class="panel-controls">
+          <label class="profile-picker">
+            <small>SHIP PROFILE</small>
+            <select id="profile-select" aria-label="Ship profile"></select>
+          </label>
+          <label class="test-switch">
+            <input id="test-mode" type="checkbox">
+            <span class="switch-track"><span></span></span>
+            <span><strong>TEST MODE</strong><small>NO KEY OUTPUT</small></span>
+          </label>
+        </div>
       </section>
 
       <section id="button-grid" class="button-grid" aria-live="polite"></section>
@@ -65,9 +71,12 @@
             <label>Visible name<input id="field-name" name="name" maxlength="60" required placeholder="Open Comms"></label>
             <label>Unique ID<input id="field-id" name="id" maxlength="50" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="open-comms"></label>
             <label>Page<select id="field-page" name="page_id" required></select></label>
-            <label>Key / combination<input id="field-keys" name="keys" maxlength="50" required placeholder="Ctrl+F12"></label>
+            <label>Action type<select id="field-type" name="type">
+              <option value="hotkey">Hotkey</option><option value="macro">Macro</option><option value="obs">OBS WebSocket</option>
+            </select></label>
+            <label class="hotkey-option">Key / combination<input id="field-keys" name="keys" maxlength="50" placeholder="Ctrl+F12"></label>
             <label>Hold duration (ms)<input id="field-hold" name="hold_ms" type="number" min="0" max="5000" step="50" value="0" required></label>
-            <label>Short icon<input id="field-icon" name="icon" maxlength="8" placeholder="COM"></label>
+            <label>Icon / local path<input id="field-icon" name="icon" maxlength="200" placeholder="assets/icons/landing-gear.svg"></label>
             <label>Color<select id="field-color" name="color">
               <option value="cyan">Cyan</option><option value="blue">Blue</option>
               <option value="violet">Violet</option><option value="amber">Amber</option>
@@ -75,8 +84,23 @@
               <option value="red">Red</option>
             </select></label>
           </div>
+          <label class="macro-field action-options" data-action="macro">Macro JSON
+            <textarea id="field-macro" name="macro" rows="7" spellcheck="false" placeholder='[{"keys":"F1","delay_after_ms":500},{"keys":"F2"}]'></textarea>
+          </label>
+          <div class="obs-fields action-options" data-action="obs">
+            <label>OBS action<select id="field-obs-action">
+              <option value="toggle_recording">Toggle recording</option><option value="start_recording">Start recording</option>
+              <option value="stop_recording">Stop recording</option><option value="pause_recording">Pause recording</option>
+              <option value="resume_recording">Resume recording</option><option value="set_scene">Set scene</option>
+              <option value="toggle_mute">Toggle mute</option><option value="set_source_visibility">Set source visibility</option>
+            </select></label>
+            <label>Scene name<input id="field-scene-name" maxlength="200" placeholder="Star Citizen - Cockpit"></label>
+            <label>Input name<input id="field-input-name" maxlength="200" placeholder="Mic/Aux"></label>
+            <label>Source name<input id="field-source-name" maxlength="200" placeholder="Webcam"></label>
+            <label>Source visibility<select id="field-visible"><option value="true">Visible</option><option value="false">Hidden</option></select></label>
+          </div>
           <label class="disabled-field"><input id="field-disabled" name="disabled" type="checkbox"><span>Keep this button disabled</span></label>
-          <p class="form-help">IDs use lowercase letters, numbers and hyphens. Enabled bindings accept keyboard keys such as F4, Alt+N or Ctrl+F12.</p>
+          <p class="form-help">Choose one action type. OBS actions use config/settings.json. Icons accept a short label or a local assets/icons file path.</p>
           <div class="form-footer">
             <button id="delete-button" class="action-button danger" type="button" hidden>DELETE</button>
             <button class="action-button primary" type="submit">SAVE TO JSON</button>
