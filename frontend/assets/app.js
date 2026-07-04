@@ -2,9 +2,10 @@ const state = {
   profiles: [], activeProfile: "default", pages: [], activePage: null,
   forceTestMode: false, editingId: null, editingProfile: null,
   editingPage: null, editingPosition: null, editingItem: null,
-  deckEditMode: false, configWarnings: [],
+  deckEditMode: false, cockpitMode: false, configWarnings: [],
 };
 const colors = new Set(["cyan", "blue", "violet", "amber", "orange", "green", "red"]);
+const themes = new Set(["dark-default", "space-blue", "amber-cockpit", "red-alert", "industrial-mining"]);
 const customIconPattern = /^assets\/icons\/[A-Za-z0-9][A-Za-z0-9._-]*\.(svg|png|webp|jpe?g)$/i;
 
 const grid = document.querySelector("#button-grid");
@@ -26,8 +27,10 @@ const backupFile = document.querySelector("#backup-file");
 const reminderWidget = document.querySelector("#activity-reminder");
 const reminderToggle = document.querySelector("#reminder-toggle");
 const reminderCountdown = document.querySelector("#reminder-countdown");
-const reminderAction = document.querySelector("#reminder-action");
-const reminderState = { armed: false, ready: false, dueAt: 0, interval: null };
+const reminderState = { armed: false, dueAt: 0, interval: null, sending: false };
+const fullscreenToggle = document.querySelector("#fullscreen-toggle");
+const cockpitToggle = document.querySelector("#cockpit-toggle");
+const themeSelect = document.querySelector("#theme-select");
 
 document.querySelector("#open-editor").addEventListener("click", toggleDeckEditMode);
 document.querySelector("#close-editor").addEventListener("click", () => setEditorMode(false));
@@ -49,7 +52,10 @@ document.querySelector("#export-backup").addEventListener("click", exportBackup)
 document.querySelector("#import-backup").addEventListener("click", () => backupFile.click());
 backupFile.addEventListener("change", importBackup);
 reminderToggle.addEventListener("click", toggleActivityReminder);
-reminderAction.addEventListener("click", sendReminderKey);
+fullscreenToggle.addEventListener("click", toggleFullscreen);
+cockpitToggle.addEventListener("click", () => applyCockpitMode(!state.cockpitMode));
+themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+document.addEventListener("fullscreenchange", updateFullscreenControl);
 document.querySelector("#field-name").addEventListener("input", (event) => {
   const idField = document.querySelector("#field-id");
   if (state.editingId === null && !idField.dataset.manual) idField.value = slugify(event.target.value);
@@ -76,6 +82,8 @@ testToggle.addEventListener("change", () => {
   localStorage.setItem("nova-deck-test", testToggle.checked);
   writeLog(testToggle.checked ? "TEST MODE ENABLED // KEY OUTPUT BLOCKED" : "LIVE MODE ENABLED // KEY OUTPUT ARMED");
 });
+applyCockpitMode(localStorage.getItem("nova-deck-cockpit") === "true", false);
+updateFullscreenControl();
 
 function writeLog(message, type = "") {
   log.className = `command-log ${type}`;
@@ -86,6 +94,45 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 2800);
+}
+
+async function toggleFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else if (document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      showToast("Pantalla completa no disponible. Usa Añadir a pantalla de inicio en el menú del navegador.");
+    }
+  } catch (error) {
+    showToast(`No se pudo activar pantalla completa: ${error.message}`);
+  }
+}
+
+function updateFullscreenControl() {
+  const active = Boolean(document.fullscreenElement);
+  fullscreenToggle.textContent = active ? "EXIT FULL" : "FULL";
+  fullscreenToggle.classList.toggle("active", active);
+  fullscreenToggle.setAttribute("aria-pressed", String(active));
+}
+
+function applyCockpitMode(enabled, persist = true) {
+  state.cockpitMode = enabled;
+  if (enabled && state.deckEditMode) toggleDeckEditMode();
+  if (enabled) setEditorMode(false);
+  document.body.classList.toggle("cockpit-mode", enabled);
+  cockpitToggle.textContent = enabled ? "EXIT CABIN" : "CABIN";
+  cockpitToggle.classList.toggle("active", enabled);
+  cockpitToggle.setAttribute("aria-pressed", String(enabled));
+  if (persist) localStorage.setItem("nova-deck-cockpit", String(enabled));
+}
+
+function applyTheme(theme, persist = true) {
+  const selected = themes.has(theme) ? theme : "dark-default";
+  document.body.dataset.theme = selected;
+  themeSelect.value = selected;
+  if (persist) localStorage.setItem("nova-deck-theme", selected);
 }
 
 function randomReminderDelay() {
@@ -99,36 +146,29 @@ function toggleActivityReminder() {
 
 function startActivityReminder() {
   reminderState.armed = true;
-  reminderState.ready = false;
+  reminderState.sending = false;
   reminderState.dueAt = Date.now() + randomReminderDelay();
   reminderWidget.classList.add("armed");
   reminderToggle.setAttribute("aria-pressed", "true");
-  reminderAction.hidden = true;
   clearInterval(reminderState.interval);
   reminderState.interval = setInterval(updateReminderCountdown, 1000);
+  writeLog("AFK MODE ENABLED // AUTOMATIC F2 CYCLE ARMED", "success");
   updateReminderCountdown();
 }
 
 function stopActivityReminder() {
   clearInterval(reminderState.interval);
-  Object.assign(reminderState, { armed: false, ready: false, dueAt: 0, interval: null });
+  Object.assign(reminderState, { armed: false, dueAt: 0, interval: null, sending: false });
   reminderWidget.classList.remove("armed");
   reminderToggle.setAttribute("aria-pressed", "false");
   reminderCountdown.textContent = "OFF";
-  reminderAction.hidden = true;
+  writeLog("AFK MODE DISABLED // AUTOMATIC CYCLE STOPPED");
 }
 
 function updateReminderCountdown() {
   if (!reminderState.armed) return;
   const remaining = Math.max(0, reminderState.dueAt - Date.now());
-  if (remaining === 0) {
-    reminderState.ready = true;
-    reminderCountdown.textContent = "READY";
-    reminderAction.hidden = false;
-    clearInterval(reminderState.interval);
-    reminderState.interval = null;
-    return;
-  }
+  if (remaining === 0 && !reminderState.sending) void sendReminderKey();
   const totalSeconds = Math.ceil(remaining / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = String(totalSeconds % 60).padStart(2, "0");
@@ -136,8 +176,9 @@ function updateReminderCountdown() {
 }
 
 async function sendReminderKey() {
-  if (!reminderState.armed || !reminderState.ready) return;
-  reminderAction.disabled = true;
+  if (!reminderState.armed || reminderState.sending) return;
+  reminderState.sending = true;
+  reminderCountdown.textContent = "F2";
   try {
     const result = await requestJson("/api/commands", {
       method: "POST",
@@ -147,14 +188,17 @@ async function sendReminderKey() {
       }),
     });
     writeLog(
-      `ACTIVITY REMINDER // F2 ${result.test_mode ? "SIMULATED" : "SENT"} // NEXT WINDOW ARMED`,
+      `AFK MODE // F2 ${result.test_mode ? "SIMULATED" : "SENT"} // NEXT CYCLE ARMED`,
       "success",
     );
-    startActivityReminder();
   } catch (error) {
-    writeLog(`ACTIVITY REMINDER ERROR // ${error.message}`, "error");
+    writeLog(`AFK MODE ERROR // ${error.message} // RETRY CYCLE ARMED`, "error");
   } finally {
-    reminderAction.disabled = false;
+    if (reminderState.armed) {
+      reminderState.sending = false;
+      reminderState.dueAt = Date.now() + randomReminderDelay();
+      updateReminderCountdown();
+    }
   }
 }
 
@@ -713,6 +757,8 @@ async function boot() {
     const [config, status] = await Promise.all([requestJson("/api/profiles"), requestJson("/api/status")]);
     state.profiles = config.profiles;
     state.forceTestMode = status.force_test_mode;
+    const savedTheme = localStorage.getItem("nova-deck-theme");
+    applyTheme(themes.has(savedTheme) ? savedTheme : status.default_theme, false);
     document.querySelector("#deck-title").textContent = config.title || "NOVA DECK // SC";
     if (state.forceTestMode) {
       testToggle.checked = true;

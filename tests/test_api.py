@@ -88,6 +88,31 @@ def test_serves_custom_icon_assets() -> None:
     assert missing.status_code == 404
 
 
+def test_serves_mobile_app_manifest_and_favicon() -> None:
+    with TestClient(create_app(CONFIG, force_test_mode=True)) as client:
+        manifest = client.get("/manifest.webmanifest")
+        favicon = client.get("/favicon.ico")
+    assert manifest.status_code == 200
+    assert manifest.json()["display"] == "fullscreen"
+    assert manifest.json()["start_url"] == "/"
+    assert favicon.status_code == 200
+    assert favicon.headers["content-type"].startswith("image/svg+xml")
+
+
+def test_frontend_assets_revalidate_after_updates() -> None:
+    with TestClient(create_app(CONFIG, force_test_mode=True)) as client:
+        index = client.get("/")
+        javascript = client.get("/assets/app.js?v=test")
+        stylesheet = client.get("/assets/styles.css?v=test")
+        themes = client.get("/assets/themes.css?v=test")
+    assert "app.js?v=1.1.0-afk" in index.text
+    assert "styles.css?v=1.1.0-afk" in index.text
+    assert "themes.css?v=1.1.0-afk" in index.text
+    assert javascript.headers["cache-control"] == "no-cache, must-revalidate"
+    assert stylesheet.headers["cache-control"] == "no-cache, must-revalidate"
+    assert themes.headers["cache-control"] == "no-cache, must-revalidate"
+
+
 def test_command_is_simulated_in_forced_test_mode() -> None:
     app = create_app(CONFIG, force_test_mode=True)
     with TestClient(app) as client:

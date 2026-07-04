@@ -43,6 +43,56 @@ Para crear un acceso directo: clic derecho sobre `start.bat` → **Mostrar más 
 3. Escribe en el navegador del celular la URL que muestra el script, por ejemplo `http://192.168.1.42:8765`.
 4. Mantén Star Citizen enfocado para los botones hotkey/macro. Las acciones OBS no necesitan que OBS esté enfocado.
 
+## Pantalla completa y modo cabina
+
+- Pulsa **FULL** para solicitar pantalla completa. El navegador exige que esta acción nazca de un toque y algunos dispositivos, especialmente Safari, pueden no ofrecer esa API.
+- Pulsa **CABIN** para ocultar título, editor, modo prueba, monitor de comandos y recordatorio. Quedan visibles únicamente conexión, perfil, páginas y botones.
+- Pulsa **EXIT CABIN** para recuperar la interfaz completa.
+- La preferencia de modo cabina se guarda en `localStorage` de ese celular o tablet.
+- La interfaz evita selección de texto, zoom accidental y gestos de doble toque sobre controles. Los botones conservan áreas táctiles amplias en vertical y aprovechan más columnas en horizontal.
+
+### Acceso directo en Android
+
+1. Abre la URL local en Chrome.
+2. Abre el menú `⋮`.
+3. Elige **Añadir a pantalla de inicio** o **Instalar aplicación**, si aparece.
+4. Inicia NOVA DECK desde el nuevo ícono.
+
+### Acceso directo en iPhone o iPad
+
+1. Abre la URL local en Safari.
+2. Pulsa **Compartir**.
+3. Elige **Añadir a pantalla de inicio**.
+4. Abre NOVA DECK desde el ícono creado.
+
+La app incluye manifest y metadatos móviles, pero no se publica en tiendas. Como usa una URL HTTP privada de la LAN, algunos navegadores pueden crear solo un acceso directo en vez de instalar una PWA completa. Es normal y no afecta el panel.
+
+## Temas visuales
+
+El selector **THEME** permite cambiar la apariencia inmediatamente:
+
+- **Dark Default:** negro azulado y cian, apariencia original.
+- **Space Blue:** azul profundo con acento celeste moderado.
+- **Amber Cockpit:** marrón oscuro y ámbar cálido.
+- **Red Alert:** rojo oscuro de emergencia sin saturación excesiva.
+- **Industrial Mining:** gris verdoso y tonos minerales apagados.
+
+La selección se guarda en `localStorage`, por lo que cada celular o tablet puede conservar su propio tema. Los colores asignados individualmente a los botones siguen teniendo prioridad para íconos y señales; el tema modifica fondo, superficie, borde, texto, alertas y estado presionado.
+
+Para definir el tema inicial de dispositivos que todavía no tengan una preferencia guardada, edita `config/settings.json`:
+
+```json
+{
+  "app": {
+    "debug": false,
+    "log_level": "INFO",
+    "default_theme": "space-blue"
+  }
+}
+```
+
+Valores válidos: `dark-default`, `space-blue`, `amber-cockpit`, `red-alert` e `industrial-mining`. El selector se oculta en modo cabina, pero el tema elegido permanece activo.
+
 También puedes activar **TEST MODE** desde la esquina superior de la interfaz. `start-test.bat` es más seguro para la primera prueba porque bloquea la inyección en el servidor y el interruptor no puede desactivarla.
 
 ## Uso real con Star Citizen
@@ -55,9 +105,9 @@ Los bindings de Star Citizen cambian entre versiones y configuraciones personale
 
 ### Recordatorio de actividad
 
-La esquina inferior muestra una pequeña palanca **REMINDER**. Al activarla inicia una cuenta regresiva aleatoria de 3:30 a 4:30 minutos. Cuando llega a cero aparece **F2 READY**; la tecla solo se envía si pulsas manualmente ese botón. Después comienza un nuevo intervalo. Pulsa nuevamente **REMINDER** para desactivarlo en cualquier momento.
+La esquina inferior muestra una pequeña palanca **MODO AFK**. Al activarla inicia una cuenta regresiva aleatoria de 3:30 a 4:30 minutos. Al llegar a cero envía `F2` automáticamente y programa otro intervalo aleatorio. El ciclo continúa hasta que vuelvas a pulsar **MODO AFK** para apagarlo.
 
-El recordatorio es silencioso: no vibra, no muestra notificaciones emergentes y nunca envía teclas automáticamente. Usa el botón **TEST MODE** para comprobarlo sin inyectar `F2`.
+El modo es silencioso: no vibra ni muestra notificaciones emergentes. Usa **TEST MODE** para comprobar los ciclos sin inyectar realmente `F2`. El navegador debe permanecer abierto y el PC activo para que el temporizador funcione correctamente.
 
 En Flight, **Extend / Retract Wings** usa `Alt+K` (la acción de transformación/configuración de nave). **Open All Doors** queda inicialmente deshabilitado con `F9` como atajo sugerido: primero asigna `F9` a la acción correspondiente dentro de `Advanced Controls Customization` y después habilita el botón desde **CONFIG**. No se usa una combinación basada en `O`, porque Star Citizen puede interpretarla como el comando de escudos. La cuadrícula compacta de Flight admite hasta diez botones visibles.
 

@@ -82,6 +82,11 @@ def create_app(
             LOGGER.exception("Fallo no controlado en %s %s", request.method, request.url.path)
             raise
         LOGGER.debug("%s %s -> %s", request.method, request.url.path, response.status_code)
+        if request.url.path in {
+            "/assets/app.js", "/assets/styles.css", "/assets/themes.css",
+            "/manifest.webmanifest"
+        }:
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
         return response
 
     @app.get("/api/status")
@@ -98,6 +103,7 @@ def create_app(
             "ok": True,
             "force_test_mode": request.app.state.force_test_mode,
             "debug": request.app.state.debug_mode,
+            "default_theme": runtime.default_theme,
             "local_ip": local_ip(),
             "obs": request.app.state.obs.public_status(),
             "configuration": config_status,
@@ -320,6 +326,14 @@ def create_app(
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(frontend / "index.html")
+
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def manifest() -> FileResponse:
+        return FileResponse(frontend / "manifest.webmanifest", media_type="application/manifest+json")
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon() -> FileResponse:
+        return FileResponse(ROOT / "assets" / "icons" / "nova-deck.svg", media_type="image/svg+xml")
 
     return app
 
