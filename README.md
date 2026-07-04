@@ -53,6 +53,12 @@ También puedes activar **TEST MODE** desde la esquina superior de la interfaz. 
 
 Los bindings de Star Citizen cambian entre versiones y configuraciones personales. El JSON incluido es un ejemplo inicial: revísalo contra `Options > Keybindings` dentro del juego antes de usarlo. Si el juego se ejecuta como administrador, Windows puede impedir que una aplicación sin elevar le envíe teclas; lo recomendado es ejecutar ambos con el mismo nivel de privilegio.
 
+### Recordatorio de actividad
+
+La esquina inferior muestra una pequeña palanca **REMINDER**. Al activarla inicia una cuenta regresiva aleatoria de 3:30 a 4:30 minutos. Cuando llega a cero aparece **F2 READY**; la tecla solo se envía si pulsas manualmente ese botón. Después comienza un nuevo intervalo. Pulsa nuevamente **REMINDER** para desactivarlo en cualquier momento.
+
+El recordatorio es silencioso: no vibra, no muestra notificaciones emergentes y nunca envía teclas automáticamente. Usa el botón **TEST MODE** para comprobarlo sin inyectar `F2`.
+
 En Flight, **Extend / Retract Wings** usa `Alt+K` (la acción de transformación/configuración de nave). **Open All Doors** queda inicialmente deshabilitado con `F9` como atajo sugerido: primero asigna `F9` a la acción correspondiente dentro de `Advanced Controls Customization` y después habilita el botón desde **CONFIG**. No se usa una combinación basada en `O`, porque Star Citizen puede interpretarla como el comando de escudos. La cuadrícula compacta de Flight admite hasta diez botones visibles.
 
 ## Integración con OBS Studio
@@ -137,16 +143,47 @@ API local:
 
 ## Editor visual de botones
 
-Pulsa **CONFIG** en la esquina superior derecha del panel. Desde esa pantalla puedes:
+Pulsa **EDIT** en la esquina superior derecha. El panel entra en modo edición y los botones quedan marcados; al tocar uno se abre su formulario sin ejecutar la acción. Pulsa **DONE** para volver al funcionamiento normal.
+
+Desde el editor puedes:
 
 - Crear un botón con **NEW BUTTON**.
-- Seleccionar cualquier botón del catálogo para modificar su nombre, ID, página, binding, icono, color o estado.
-- Mover un botón eligiendo otra página y guardando.
+- Modificar label, ID, perfil, página, hotkey, macro, acción OBS, icono, color o estado.
+- Duplicar el botón seleccionado con **DUPLICATE**.
+- Moverlo entre perfiles o páginas desde los selectores.
+- Cambiar su posición con **MOVE UP** y **MOVE DOWN**.
 - Borrarlo mediante **DELETE** y la confirmación posterior.
 
-Cada operación válida se guarda inmediatamente en `config/buttons.json`. El servidor escribe primero un archivo temporal y después reemplaza el JSON, reduciendo el riesgo de dejar una configuración incompleta. Los IDs deben ser únicos dentro del perfil y un binding inválido solo puede guardarse si el botón queda deshabilitado.
+Cada operación válida se guarda inmediatamente en `config/buttons.json`. Antes de crear, modificar, mover, duplicar o borrar, se guarda una copia completa en `config/backups/`. El servidor escribe primero un archivo temporal y después reemplaza el JSON, reduciendo el riesgo de dejar una configuración incompleta. Los IDs deben ser únicos dentro del perfil y un binding inválido solo puede guardarse si el botón queda deshabilitado.
 
-Como el editor escribe en disco, evita editar `buttons.json` manualmente al mismo tiempo. El editor no permite crear perfiles o páginas; esas estructuras se agregan directamente en JSON.
+Como el editor escribe en disco, evita editar `buttons.json` manualmente al mismo tiempo. Esta versión todavía no crea perfiles o páginas nuevas; esas estructuras se agregan directamente en JSON.
+
+## Backup, exportación e importación
+
+Abre **CONFIG** para encontrar el panel **CONFIGURATION BACKUP**.
+
+### Exportar
+
+1. Pulsa **EXPORT JSON**.
+2. El navegador descargará un archivo como `nova-deck-backup-20260703-143000.json`.
+3. Guárdalo en una carpeta privada.
+
+El JSON incluye perfiles, páginas, botones, macros, colores, rutas de íconos, settings generales y configuración OBS. Por seguridad, **la descarga nunca contiene `obs.password`**. Los íconos se incluyen como referencias `assets/icons/...`; si agregaste archivos de ícono propios, conserva también una copia de esos archivos.
+
+### Importar
+
+1. Pulsa **IMPORT JSON** y selecciona un archivo `.json` de hasta 2 MB.
+2. Revisa la confirmación antes de continuar.
+3. El backend valida completamente el archivo antes de modificar la configuración.
+4. Si es válido, perfiles y botones se actualizan sin reiniciar el servidor.
+
+Si el backup descargado no contiene contraseña OBS, se conserva la contraseña que ya existe en ese PC. Al migrar a otro PC, ingrésala nuevamente en `config/settings.json`.
+
+Antes de cada importación válida se crea automáticamente una copia completa en `config/backups/before-import-*.json`. Esa copia local sí conserva la contraseña OBS para permitir una recuperación en el mismo equipo; la carpeta está excluida de Git y nunca se entrega mediante la API de descarga.
+
+También se puede importar directamente un `buttons.json` antiguo. En ese caso solo se reemplazan perfiles, páginas y botones; los settings actuales permanecen intactos.
+
+Si el JSON está mal formado, contiene botones inválidos o usa una versión de backup no soportada, la importación se rechaza y los archivos actuales no se sobrescriben.
 
 ## Edición manual y formato JSON
 
@@ -300,6 +337,7 @@ StarCitizen/
 │   └── icons/            # SVG, PNG, WebP o JPG personalizados
 ├── app/
 │   ├── main.py          # API y servidor web
+│   ├── backup.py        # Exportación, validación, importación y rollback
 │   ├── config.py        # Carga/validación del JSON
 │   ├── models.py        # Esquemas compartidos de botones y macros
 │   ├── settings.py      # Configuración de ejecución y debug
@@ -308,7 +346,8 @@ StarCitizen/
 ├── config/
 │   ├── buttons.json          # Perfiles y acciones editables
 │   ├── settings.example.json # Plantilla segura versionada
-│   └── settings.json         # Credenciales locales, ignoradas por Git
+│   ├── settings.json         # Credenciales locales, ignoradas por Git
+│   └── backups/              # Copias automáticas previas a importación
 ├── frontend/
 │   ├── index.html
 │   └── assets/

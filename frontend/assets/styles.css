@@ -10,9 +10,11 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { background: var(--bg); }
+html { background: var(--bg); overflow-x: hidden; }
 body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   min-height: 100vh;
   color: var(--text);
   background:
@@ -102,6 +104,18 @@ h1 { margin: 4px 0 0; font-size: clamp(25px, 5vw, 39px); font-weight: 300; lette
 .deck-button.orange { --accent: #ff7b42; } .deck-button.green { --accent: #50e39b; }
 .deck-button.red { --accent: #ff5263; }
 .button-grid.flight-compact { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; min-height: 0; }
+.edit-toolbar { display: flex; align-items: center; gap: 9px; margin: 12px 0 0; padding: 10px; border: 1px solid #2d6170; background: rgba(12, 34, 43, .88); }
+.edit-toolbar span { margin-right: auto; color: var(--cyan); font: 9px Consolas, monospace; }
+body.deck-editing .deck-button { cursor: cell; outline: 1px dashed rgba(54,216,239,.48); outline-offset: -5px; }
+body.deck-editing .deck-button::after { content: "EDIT"; position: absolute; top: 7px; left: 8px; color: var(--cyan); font: 7px Consolas, monospace; letter-spacing: .1em; }
+.activity-reminder { position: fixed; right: max(10px, env(safe-area-inset-right)); bottom: calc(82px + env(safe-area-inset-bottom)); z-index: 12; display: flex; align-items: center; gap: 7px; padding: 7px; border: 1px solid #23404b; background: rgba(4, 11, 16, .94); box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.reminder-toggle, .reminder-action { border: 1px solid #31505b; background: #09151c; color: #78919b; font: 8px Consolas, monospace; letter-spacing: .08em; cursor: pointer; }
+.reminder-toggle { display: flex; align-items: center; gap: 6px; padding: 7px 8px; }
+.reminder-lamp { width: 7px; height: 7px; border: 1px solid #4c6972; border-radius: 50%; background: #18282f; }
+.activity-reminder.armed .reminder-lamp { border-color: #55e69b; background: #55e69b; box-shadow: 0 0 9px rgba(85,230,155,.65); }
+.reminder-countdown { min-width: 35px; color: #8db4c1; font: 9px Consolas, monospace; text-align: center; }
+.reminder-action { padding: 7px 8px; color: #071014; border-color: #f2bd4b; background: #f2bd4b; animation: reminder-pulse 1.4s ease-in-out infinite; }
+@keyframes reminder-pulse { 50% { box-shadow: 0 0 13px rgba(242,189,75,.55); } }
 .flight-compact .deck-button { min-height: 118px; padding: 14px 12px 13px; }
 .flight-compact .key-icon { font-size: clamp(19px, 3vw, 25px); }
 .flight-compact .custom-icon { width: 39px; height: 39px; }
@@ -128,6 +142,11 @@ h1 { margin: 4px 0 0; font-size: clamp(25px, 5vw, 39px); font-weight: 300; lette
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 .editor-header { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; }
+.backup-tools { display: flex; align-items: center; gap: 10px; margin: -10px 0 18px; padding: 12px 14px; border: 1px solid #17313d; background: rgba(7, 16, 23, .72); }
+.backup-tools > div { display: grid; gap: 3px; margin-right: auto; }
+.backup-tools small { color: var(--muted); font-size: 8px; }
+.backup-tools strong { color: #b9d8df; font-size: 11px; }
+.backup-safe { color: #55e69b; font-size: 8px; text-transform: uppercase; }
 .editor-header small, .form-heading small { color: var(--muted); font-size: 8px; }
 .editor-actions { display: flex; gap: 8px; }
 .action-button {
@@ -175,6 +194,7 @@ h1 { margin: 4px 0 0; font-size: clamp(25px, 5vw, 39px); font-weight: 300; lette
 .form-message { min-height: 18px; padding-top: 12px; font: 10px Consolas, monospace; color: #55e69b; }
 .form-message.error { color: #ff6572; }
 body.editing .page-nav { display: none; }
+body.editing .activity-reminder { display: none; }
 body.editing main { padding-bottom: 38px; }
 
 @media (max-width: 720px) {
@@ -190,10 +210,17 @@ body.editing main { padding-bottom: 38px; }
   .editor-header { align-items: stretch; flex-direction: column; }
   .editor-actions { width: 100%; }
   .editor-actions .action-button { flex: 1; }
+  .backup-tools { align-items: stretch; flex-wrap: wrap; }
+  .backup-tools > div { width: 100%; }
+  .backup-tools .action-button { flex: 1; }
+  .backup-safe { width: 100%; }
   .editor-layout { grid-template-columns: 1fr; }
   .button-catalogue { max-height: 240px; }
   .form-grid { grid-template-columns: 1fr; }
   .obs-fields { grid-template-columns: 1fr; }
+  .edit-toolbar { flex-wrap: wrap; }
+  .edit-toolbar span { width: 100%; }
+  .edit-toolbar .action-button { flex: 1; }
 }
 @media (max-width: 430px) {
   .button-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -210,6 +237,7 @@ body.editing main { padding-bottom: 38px; }
   .system-state span { display: none; }
   .top-actions { gap: 9px; }
   .config-button { padding-inline: 8px; }
+  .activity-reminder { bottom: calc(74px + env(safe-area-inset-bottom)); }
   .delete-confirm { align-items: stretch; flex-wrap: wrap; }
   .delete-confirm span { width: 100%; }
 }

@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import socket
+from datetime import datetime
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
+from app.backup import BackupError, BackupManager
 from app.config import ButtonConfig
 from app.keyboard import KeyboardSender, parse_combo
 from app.models import ButtonInput, ButtonMutation, CommandRequest
@@ -18,6 +21,7 @@ from app.obs import ObsController, ObsError
 from app.settings import load_app_settings
 
 ROOT = Path(__file__).resolve().parents[1]
+APP_VERSION = "1.1.0"
 LOGGER = logging.getLogger("nova_deck")
 
 
@@ -61,8 +65,10 @@ def create_app(
     )
     LOGGER.setLevel(getattr(logging, log_level))
     # Debug aumenta los logs, pero no expone tracebacks HTTP a la red local.
-    app = FastAPI(title="Star Citizen Deck", version="1.1.0", debug=False)
-    app.state.config = ButtonConfig(config_path or ROOT / "config" / "buttons.json")
+    app = FastAPI(title="Star Citizen Deck", version=APP_VERSION, debug=False)
+    buttons_path = config_path or ROOT / "config" / "buttons.json"
+    app.state.config = ButtonConfig(buttons_path)
+    app.state.backup = BackupManager(buttons_path, settings_path, APP_VERSION)
     app.state.keyboard = KeyboardSender()
     app.state.obs = ObsController(settings_path)
     app.state.force_test_mode = force_test_mode
@@ -141,6 +147,7 @@ def create_app(
     def create_button(payload: ButtonMutation, request: Request) -> dict:
         button = button_payload(payload)
         try:
+            safety_backup = request.app.state.backup.create_local_backup()
             created = request.app.state.config.create_button(
                 payload.profile_id, payload.page_id, button
             )
@@ -148,14 +155,17 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-        return {"ok": True, "button": created}
+        return {"ok": True, "button": created, "local_backup": safety_backup}
 
     @app.put("/api/buttons/{button_id}")
     def update_button(button_id: str, payload: ButtonMutation, request: Request) -> dict:
         button = button_payload(payload)
         try:
+            safety_backup = request.app.state.backup.create_local_backup()
             updated = request.app.state.config.update_button(
-                payload.profile_id, button_id, payload.page_id, button
+                payload.profile_id, button_id, payload.page_id, button,
+                target_profile_id=payload.target_profile_id,
+                position=payload.position,
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Botón no encontrado.") from exc
@@ -163,11 +173,12 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-        return {"ok": True, "button": updated}
+        return {"ok": True, "button": updated, "local_backup": safety_backup}
 
     @app.delete("/api/buttons/{button_id}")
     def delete_button(button_id: str, request: Request, profile_id: str = "default") -> dict:
         try:
+            safety_backup = request.app.state.backup.create_local_backup()
             removed = request.app.state.config.delete_button(profile_id, button_id)
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Botón no encontrado.") from exc
@@ -175,7 +186,47 @@ def create_app(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-        return {"ok": True, "button": removed}
+        return {"ok": True, "button": removed, "local_backup": safety_backup}
+
+    @app.get("/api/backup/export")
+    def export_backup(request: Request) -> Response:
+        try:
+            backup = request.app.state.backup.export(include_secrets=False)
+        except BackupError as exc:
+            LOGGER.error("No se pudo exportar el backup: %s", exc)
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        filename = f"nova-deck-backup-{datetime.now():%Y%m%d-%H%M%S}.json"
+        LOGGER.info("Backup seguro exportado sin contraseña OBS")
+        return Response(
+            content=json.dumps(backup, ensure_ascii=False, indent=2) + "\n",
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Cache-Control": "no-store",
+            },
+        )
+
+    @app.post("/api/backup/import")
+    async def import_backup(request: Request) -> dict:
+        body = await request.body()
+        if len(body) > 2 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="El backup supera el límite de 2 MB.")
+        try:
+            payload = json.loads(body.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=422, detail=f"JSON mal formado: {exc}") from exc
+        try:
+            result = request.app.state.backup.import_backup(payload)
+            request.app.state.config.invalidate()
+            request.app.state.config.load()
+        except BackupError as exc:
+            LOGGER.warning("Importación rechazada: %s", exc)
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            LOGGER.exception("El backup fue escrito pero no se pudo recargar")
+            raise HTTPException(status_code=500, detail=f"Backup importado, pero falló la recarga: {exc}") from exc
+        LOGGER.info("Backup importado; respaldo local: %s", result["local_backup"])
+        return {"ok": True, **result}
 
     @app.post("/api/commands")
     def command(payload: CommandRequest, request: Request) -> dict:

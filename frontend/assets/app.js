@@ -1,6 +1,8 @@
 const state = {
   profiles: [], activeProfile: "default", pages: [], activePage: null,
-  forceTestMode: false, editingId: null, configWarnings: [],
+  forceTestMode: false, editingId: null, editingProfile: null,
+  editingPage: null, editingPosition: null, editingItem: null,
+  deckEditMode: false, configWarnings: [],
 };
 const colors = new Set(["cyan", "blue", "violet", "amber", "orange", "green", "red"]);
 const customIconPattern = /^assets\/icons\/[A-Za-z0-9][A-Za-z0-9._-]*\.(svg|png|webp|jpe?g)$/i;
@@ -20,15 +22,34 @@ const buttonForm = document.querySelector("#button-form");
 const formMessage = document.querySelector("#form-message");
 const deleteButton = document.querySelector("#delete-button");
 const deleteConfirm = document.querySelector("#delete-confirm");
+const backupFile = document.querySelector("#backup-file");
+const reminderWidget = document.querySelector("#activity-reminder");
+const reminderToggle = document.querySelector("#reminder-toggle");
+const reminderCountdown = document.querySelector("#reminder-countdown");
+const reminderAction = document.querySelector("#reminder-action");
+const reminderState = { armed: false, ready: false, dueAt: 0, interval: null };
 
-document.querySelector("#open-editor").addEventListener("click", () => setEditorMode(true));
+document.querySelector("#open-editor").addEventListener("click", toggleDeckEditMode);
 document.querySelector("#close-editor").addEventListener("click", () => setEditorMode(false));
 document.querySelector("#new-button").addEventListener("click", startNewButton);
+document.querySelector("#edit-new-button").addEventListener("click", openNewButtonEditor);
+document.querySelector("#exit-edit-mode").addEventListener("click", toggleDeckEditMode);
+document.querySelector("#duplicate-button").addEventListener("click", duplicateCurrentButton);
+document.querySelector("#move-up-button").addEventListener("click", () => moveCurrentButton(-1));
+document.querySelector("#move-down-button").addEventListener("click", () => moveCurrentButton(1));
 deleteButton.addEventListener("click", () => { deleteConfirm.hidden = false; });
 document.querySelector("#cancel-delete").addEventListener("click", () => { deleteConfirm.hidden = true; });
 document.querySelector("#confirm-delete").addEventListener("click", deleteCurrentButton);
 buttonForm.addEventListener("submit", saveButton);
 document.querySelector("#field-type").addEventListener("change", updateActionFields);
+document.querySelector("#field-profile").addEventListener("change", async (event) => {
+  await populatePagesForProfile(event.target.value);
+});
+document.querySelector("#export-backup").addEventListener("click", exportBackup);
+document.querySelector("#import-backup").addEventListener("click", () => backupFile.click());
+backupFile.addEventListener("change", importBackup);
+reminderToggle.addEventListener("click", toggleActivityReminder);
+reminderAction.addEventListener("click", sendReminderKey);
 document.querySelector("#field-name").addEventListener("input", (event) => {
   const idField = document.querySelector("#field-id");
   if (state.editingId === null && !idField.dataset.manual) idField.value = slugify(event.target.value);
@@ -65,6 +86,76 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 2800);
+}
+
+function randomReminderDelay() {
+  return 210000 + Math.floor(Math.random() * 60001);
+}
+
+function toggleActivityReminder() {
+  if (reminderState.armed) stopActivityReminder();
+  else startActivityReminder();
+}
+
+function startActivityReminder() {
+  reminderState.armed = true;
+  reminderState.ready = false;
+  reminderState.dueAt = Date.now() + randomReminderDelay();
+  reminderWidget.classList.add("armed");
+  reminderToggle.setAttribute("aria-pressed", "true");
+  reminderAction.hidden = true;
+  clearInterval(reminderState.interval);
+  reminderState.interval = setInterval(updateReminderCountdown, 1000);
+  updateReminderCountdown();
+}
+
+function stopActivityReminder() {
+  clearInterval(reminderState.interval);
+  Object.assign(reminderState, { armed: false, ready: false, dueAt: 0, interval: null });
+  reminderWidget.classList.remove("armed");
+  reminderToggle.setAttribute("aria-pressed", "false");
+  reminderCountdown.textContent = "OFF";
+  reminderAction.hidden = true;
+}
+
+function updateReminderCountdown() {
+  if (!reminderState.armed) return;
+  const remaining = Math.max(0, reminderState.dueAt - Date.now());
+  if (remaining === 0) {
+    reminderState.ready = true;
+    reminderCountdown.textContent = "READY";
+    reminderAction.hidden = false;
+    clearInterval(reminderState.interval);
+    reminderState.interval = null;
+    return;
+  }
+  const totalSeconds = Math.ceil(remaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  reminderCountdown.textContent = `${minutes}:${seconds}`;
+}
+
+async function sendReminderKey() {
+  if (!reminderState.armed || !reminderState.ready) return;
+  reminderAction.disabled = true;
+  try {
+    const result = await requestJson("/api/commands", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        profile_id: "default", button_id: "star-map", test_mode: testToggle.checked,
+      }),
+    });
+    writeLog(
+      `ACTIVITY REMINDER // F2 ${result.test_mode ? "SIMULATED" : "SENT"} // NEXT WINDOW ARMED`,
+      "success",
+    );
+    startActivityReminder();
+  } catch (error) {
+    writeLog(`ACTIVITY REMINDER ERROR // ${error.message}`, "error");
+  } finally {
+    reminderAction.disabled = false;
+  }
 }
 
 function setConnection(kind, text) {
@@ -126,11 +217,27 @@ function selectPage(pageId) {
   renderNav();
 }
 
+function toggleDeckEditMode() {
+  state.deckEditMode = !state.deckEditMode;
+  document.body.classList.toggle("deck-editing", state.deckEditMode);
+  document.querySelector("#edit-toolbar").hidden = !state.deckEditMode;
+  const control = document.querySelector("#open-editor");
+  control.classList.toggle("active", state.deckEditMode);
+  control.textContent = state.deckEditMode ? "DONE" : "EDIT";
+  control.setAttribute("aria-label", state.deckEditMode ? "Desactivar modo Edit" : "Activar modo Edit");
+  if (!state.deckEditMode) setEditorMode(false);
+  if (state.activePage) selectPage(state.activePage);
+}
+
+function openNewButtonEditor() {
+  startNewButton();
+  setEditorMode(true);
+}
+
 function setEditorMode(enabled) {
   document.body.classList.toggle("editing", enabled);
   deckView.hidden = enabled;
   editorView.hidden = !enabled;
-  document.querySelector("#open-editor").classList.toggle("active", enabled);
   if (enabled) {
     renderEditorList();
     if (state.editingId === null) startNewButton();
@@ -164,6 +271,33 @@ function populatePageSelect(selectedPage) {
   }));
 }
 
+function populateProfileSelect(selectedProfile) {
+  const select = document.querySelector("#field-profile");
+  select.replaceChildren(...state.profiles.map((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.name;
+    option.selected = profile.id === selectedProfile;
+    return option;
+  }));
+}
+
+async function populatePagesForProfile(profileId, selectedPage = null) {
+  if (profileId === state.activeProfile) {
+    populatePageSelect(selectedPage || state.pages[0]?.id);
+    return;
+  }
+  const result = await requestJson(`/api/profiles/${encodeURIComponent(profileId)}`);
+  const select = document.querySelector("#field-page");
+  select.replaceChildren(...result.profile.pages.map((page) => {
+    const option = document.createElement("option");
+    option.value = page.id;
+    option.textContent = page.name;
+    option.selected = page.id === selectedPage;
+    return option;
+  }));
+}
+
 function renderEditorList() {
   editorList.replaceChildren(...state.pages.map((page) => {
     const group = document.createElement("section");
@@ -171,7 +305,7 @@ function renderEditorList() {
     const heading = document.createElement("h3");
     heading.textContent = `${page.icon || "·"} ${page.name}`;
     group.append(heading);
-    for (const item of page.buttons) {
+    page.buttons.forEach((item, index) => {
       const row = document.createElement("button");
       row.type = "button";
       row.className = `catalogue-item ${item.id === state.editingId ? "active" : ""}`;
@@ -181,31 +315,43 @@ function renderEditorList() {
       const keys = document.createElement("code");
       keys.textContent = item._config_error ? "CONFIG ERROR" : (actionType(item) === "obs" ? `OBS · ${item.obsAction}` : (item.macro ? `MACRO ×${item.macro.length}` : item.keys));
       row.append(name, keys);
-      row.addEventListener("click", () => editButton(page.id, item));
+      row.addEventListener("click", () => editButton(page.id, item, index));
       group.append(row);
-    }
+    });
     return group;
   }));
 }
 
 function startNewButton() {
   state.editingId = null;
+  state.editingProfile = null;
+  state.editingPage = null;
+  state.editingPosition = null;
+  state.editingItem = null;
   buttonForm.reset();
   document.querySelector("#field-type").value = "hotkey";
   updateActionFields();
   document.querySelector("#field-id").dataset.manual = "";
+  populateProfileSelect(state.activeProfile);
   populatePageSelect(state.activePage || state.pages[0]?.id);
   document.querySelector("#form-title").textContent = "New Button";
   document.querySelector("#form-state").textContent = "NEW";
   deleteButton.hidden = true;
+  document.querySelector("#duplicate-button").hidden = true;
+  document.querySelector("#move-up-button").hidden = true;
+  document.querySelector("#move-down-button").hidden = true;
   deleteConfirm.hidden = true;
   setFormMessage("");
   renderEditorList();
   document.querySelector("#field-name").focus();
 }
 
-function editButton(pageId, item) {
+function editButton(pageId, item, position = null) {
   state.editingId = item.id;
+  state.editingProfile = state.activeProfile;
+  state.editingPage = pageId;
+  state.editingPosition = position ?? state.pages.find((page) => page.id === pageId)?.buttons.indexOf(item) ?? 0;
+  state.editingItem = structuredClone(item);
   document.querySelector("#field-name").value = item.name;
   document.querySelector("#field-id").value = item.id;
   document.querySelector("#field-id").dataset.manual = "true";
@@ -224,10 +370,14 @@ function editButton(pageId, item) {
   document.querySelector("#field-source-name").value = item.sourceName || "";
   document.querySelector("#field-visible").value = String(item.visible ?? true);
   updateActionFields();
+  populateProfileSelect(state.activeProfile);
   populatePageSelect(pageId);
   document.querySelector("#form-title").textContent = item.name;
   document.querySelector("#form-state").textContent = "EDITING";
   deleteButton.hidden = false;
+  document.querySelector("#duplicate-button").hidden = false;
+  document.querySelector("#move-up-button").hidden = false;
+  document.querySelector("#move-down-button").hidden = false;
   deleteConfirm.hidden = true;
   setFormMessage("");
   renderEditorList();
@@ -235,6 +385,7 @@ function editButton(pageId, item) {
 
 function formPayload() {
   const type = document.querySelector("#field-type").value;
+  const targetProfile = document.querySelector("#field-profile").value;
   const icon = document.querySelector("#field-icon").value.trim();
   const macroText = document.querySelector("#field-macro").value.trim();
   let macro = null;
@@ -243,7 +394,8 @@ function formPayload() {
     if (!Array.isArray(macro)) throw new Error("Macro JSON must be an array of steps.");
   }
   return {
-    profile_id: state.activeProfile,
+    profile_id: state.editingId === null ? targetProfile : (state.editingProfile || state.activeProfile),
+    target_profile_id: state.editingId === null ? null : targetProfile,
     page_id: document.querySelector("#field-page").value,
     button: {
       id: document.querySelector("#field-id").value.trim(),
@@ -285,6 +437,75 @@ async function requestJson(url, options = {}) {
   return body;
 }
 
+async function exportBackup() {
+  try {
+    const response = await fetch("/api/backup/export");
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.detail || `HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || "nova-deck-backup.json";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    writeLog(`BACKUP EXPORTED // ${filename} // OBS PASSWORD EXCLUDED`, "success");
+    showToast("Backup exportado correctamente");
+  } catch (error) {
+    writeLog(`BACKUP ERROR // ${error.message}`, "error");
+    showToast(error.message);
+  }
+}
+
+async function importBackup(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast("El backup supera el límite de 2 MB.");
+    return;
+  }
+  let text;
+  let parsed;
+  try {
+    text = await file.text();
+    parsed = JSON.parse(text);
+  } catch (error) {
+    writeLog(`IMPORT REJECTED // JSON mal formado: ${error.message}`, "error");
+    showToast("El archivo no contiene JSON válido");
+    return;
+  }
+  const containsPassword = Boolean(parsed?.secrets?.obs_password_included);
+  const warning = containsPassword
+    ? "Este backup declara que contiene una contraseña OBS y reemplazará la configuración actual."
+    : "La configuración actual será reemplazada; la contraseña OBS local se conservará.";
+  if (!window.confirm(`${warning}\n\nSe creará primero un backup local automático. ¿Continuar?`)) return;
+  try {
+    const result = await requestJson("/api/backup/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: text,
+    });
+    const config = await requestJson("/api/profiles");
+    state.profiles = config.profiles;
+    const nextProfile = state.profiles.some((profile) => profile.id === state.activeProfile)
+      ? state.activeProfile
+      : (state.profiles.find((profile) => profile.id === "default")?.id || state.profiles[0]?.id);
+    await loadProfile(nextProfile);
+    renderEditorList();
+    startNewButton();
+    writeLog(`BACKUP IMPORTED // LOCAL SAFETY COPY: ${result.local_backup}`, "success");
+    showToast("Configuración importada correctamente");
+  } catch (error) {
+    writeLog(`IMPORT REJECTED // ${error.message}`, "error");
+    showToast(error.message);
+  }
+}
+
 async function reloadConfiguration() {
   const config = await requestJson(`/api/profiles/${encodeURIComponent(state.activeProfile)}`);
   state.pages = config.profile.pages;
@@ -309,12 +530,66 @@ async function saveButton(event) {
       body: JSON.stringify(payload),
     });
     state.editingId = result.button.id;
-    await reloadConfiguration();
+    const targetProfile = payload.target_profile_id || payload.profile_id;
+    if (targetProfile !== state.activeProfile) await loadProfile(targetProfile);
+    else await reloadConfiguration();
     const page = state.pages.find((candidate) => candidate.id === payload.page_id);
     const saved = page?.buttons.find((candidate) => candidate.id === result.button.id);
-    if (saved) editButton(page.id, saved);
-    setFormMessage(`SAVED // ${result.button.id} // CONFIG UPDATED`);
+    if (saved) editButton(page.id, saved, page.buttons.indexOf(saved));
+    setFormMessage(`SAVED // ${result.button.id} // BACKUP ${result.local_backup}`);
     showToast("Button saved to config/buttons.json");
+  } catch (error) {
+    setFormMessage(`ERROR // ${error.message}`, "error");
+  }
+}
+
+async function duplicateCurrentButton() {
+  if (!state.editingItem || !state.editingProfile || !state.editingPage) return;
+  const existingIds = new Set(state.pages.flatMap((page) => page.buttons.map((button) => button.id)));
+  let copyId = `${state.editingItem.id}-copy`;
+  let suffix = 2;
+  while (existingIds.has(copyId)) copyId = `${state.editingItem.id}-copy-${suffix++}`;
+  const copy = structuredClone(state.editingItem);
+  delete copy._config_error;
+  copy.id = copyId;
+  copy.name = `${copy.name} Copy`;
+  try {
+    const result = await requestJson("/api/buttons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        profile_id: state.editingProfile,
+        page_id: state.editingPage,
+        button: copy,
+      }),
+    });
+    await reloadConfiguration();
+    const page = state.pages.find((candidate) => candidate.id === state.editingPage);
+    const duplicate = page?.buttons.find((candidate) => candidate.id === copyId);
+    if (duplicate) editButton(page.id, duplicate, page.buttons.indexOf(duplicate));
+    setFormMessage(`DUPLICATED // ${copyId} // BACKUP ${result.local_backup}`);
+  } catch (error) {
+    setFormMessage(`ERROR // ${error.message}`, "error");
+  }
+}
+
+async function moveCurrentButton(direction) {
+  if (state.editingId === null || state.editingPosition === null) return;
+  const payload = formPayload();
+  payload.position = Math.max(0, state.editingPosition + direction);
+  try {
+    const result = await requestJson(`/api/buttons/${encodeURIComponent(state.editingId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const targetProfile = payload.target_profile_id || payload.profile_id;
+    if (targetProfile !== state.activeProfile) await loadProfile(targetProfile);
+    else await reloadConfiguration();
+    const page = state.pages.find((candidate) => candidate.id === payload.page_id);
+    const moved = page?.buttons.find((candidate) => candidate.id === result.button.id);
+    if (moved) editButton(page.id, moved, page.buttons.indexOf(moved));
+    setFormMessage(`MOVED // POSITION ${(page?.buttons.indexOf(moved) ?? 0) + 1} // BACKUP ${result.local_backup}`);
   } catch (error) {
     setFormMessage(`ERROR // ${error.message}`, "error");
   }
@@ -324,14 +599,14 @@ async function deleteCurrentButton() {
   if (state.editingId === null) return;
   const id = state.editingId;
   try {
-    await requestJson(
-      `/api/buttons/${encodeURIComponent(id)}?profile_id=${encodeURIComponent(state.activeProfile)}`,
+    const result = await requestJson(
+      `/api/buttons/${encodeURIComponent(id)}?profile_id=${encodeURIComponent(state.editingProfile || state.activeProfile)}`,
       { method: "DELETE" },
     );
     state.editingId = null;
     await reloadConfiguration();
     startNewButton();
-    setFormMessage(`DELETED // ${id} // CONFIG UPDATED`);
+    setFormMessage(`DELETED // ${id} // BACKUP ${result.local_backup}`);
     showToast("Button deleted from config/buttons.json");
   } catch (error) {
     deleteConfirm.hidden = true;
@@ -349,7 +624,7 @@ function createDeckButton(item, index) {
   const color = colors.has(item.color) ? item.color : "cyan";
   button.className = `deck-button ${color}`;
   button.type = "button";
-  button.disabled = Boolean(item.disabled);
+  button.disabled = Boolean(item.disabled) && !state.deckEditMode;
   button.dataset.index = String(index + 1).padStart(2, "0");
   button.title = item._config_error || (item.disabled ? "Configura una acción válida para habilitar este botón" : item.name);
 
@@ -387,7 +662,14 @@ function createDeckButton(item, index) {
   binding.textContent = item.disabled ? `${actionLabel} // DISABLED` : actionLabel;
   if (icon) button.append(icon);
   button.append(name, binding);
-  button.addEventListener("click", () => sendCommand(item, button));
+  button.addEventListener("click", () => {
+    if (state.deckEditMode) {
+      editButton(state.activePage, item, index);
+      setEditorMode(true);
+    } else {
+      sendCommand(item, button);
+    }
+  });
   return button;
 }
 
