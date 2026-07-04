@@ -5,7 +5,12 @@ pytest-cache-files-*/
 .test-tmp/
 tests/_buttons_*_test.json
 tests/_settings_*_test.json
+tests/_backup_*_test.json
+tests/_buttons_move_*_test.json
+tests/_buttons_reorder_test.json
+tests/backups/
 *.py[cod]
 .idea/
 .vscode/
 config/settings.json
+config/backups/

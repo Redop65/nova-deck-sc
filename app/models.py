@@ -90,5 +90,7 @@ class ButtonInput(BaseModel):
 
 class ButtonMutation(BaseModel):
     profile_id: str = Field(default="default", min_length=1, max_length=50)
+    target_profile_id: str | None = Field(default=None, min_length=1, max_length=50)
     page_id: str = Field(min_length=1, max_length=50)
+    position: int | None = Field(default=None, ge=0, le=500)
     button: ButtonInput

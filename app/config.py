@@ -173,6 +173,15 @@ class ButtonConfig:
         self.load()
         return deepcopy(self._issues)
 
+    def export_data(self) -> dict[str, Any]:
+        """Return the original editable data without runtime warning markers."""
+        self.load()
+        return deepcopy(self._source_data)
+
+    def invalidate(self) -> None:
+        with self._lock:
+            self._mtime_ns = -1
+
     def get_profile(self, profile_id: str) -> dict[str, Any] | None:
         data = self.load()
         return next((profile for profile in data["profiles"] if profile["id"] == profile_id), None)
@@ -196,24 +205,28 @@ class ButtonConfig:
             return button
 
     def update_button(
-        self, profile_id: str, button_id: str, page_id: str, button: dict[str, Any]
+        self, profile_id: str, button_id: str, page_id: str, button: dict[str, Any],
+        target_profile_id: str | None = None, position: int | None = None,
     ) -> dict[str, Any]:
         with self._lock:
             self.load()
             data = deepcopy(self._source_data)
-            profile = self._find_profile(data, profile_id)
-            source_page, position = self._find_button(profile, button_id)
-            if source_page is None or position is None:
+            source_profile = self._find_profile(data, profile_id)
+            source_page, source_position = self._find_button(source_profile, button_id)
+            if source_page is None or source_position is None:
                 raise KeyError(button_id)
-            if button["id"] != button_id and button["id"] in self._buttons.get(profile_id, {}):
+            destination_id = target_profile_id or profile_id
+            destination_profile = self._find_profile(data, destination_id)
+            existing = self._buttons.get(destination_id, {}).get(button["id"])
+            same_button = destination_id == profile_id and button["id"] == button_id
+            if existing is not None and not same_button:
                 raise ValueError(f"Ya existe un botón con el ID '{button['id']}'.")
 
-            target_page = self._find_page(profile, page_id)
-            if source_page is target_page:
-                source_page["buttons"][position] = button
-            else:
-                source_page["buttons"].pop(position)
-                target_page["buttons"].append(button)
+            source_page["buttons"].pop(source_position)
+            target_page = self._find_page(destination_profile, page_id)
+            target_position = len(target_page["buttons"]) if position is None else position
+            target_position = max(0, min(target_position, len(target_page["buttons"])))
+            target_page["buttons"].insert(target_position, button)
             self._write(data)
             return button
 

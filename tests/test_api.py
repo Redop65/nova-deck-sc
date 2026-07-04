@@ -411,3 +411,60 @@ def test_same_button_id_can_exist_in_different_profiles() -> None:
         )
     finally:
         editable_config.unlink(missing_ok=True)
+
+
+def test_editor_moves_button_between_profiles_and_creates_backup() -> None:
+    editable_config = Path(__file__).parent / "_buttons_move_profile_test.json"
+    data = json.loads(CONFIG.read_text(encoding="utf-8"))
+    editable_config.write_text(json.dumps(data), encoding="utf-8")
+    landing = next(
+        button
+        for page in profile_pages(data)
+        for button in page["buttons"]
+        if button["id"] == "landing"
+    )
+    payload = {
+        "profile_id": "default",
+        "target_profile_id": "vulture",
+        "page_id": "flight",
+        "position": 0,
+        "button": landing,
+    }
+    try:
+        with TestClient(create_app(editable_config, force_test_mode=True)) as client:
+            moved = client.put("/api/buttons/landing", json=payload)
+            default = client.get("/api/profiles/default").json()["profile"]
+            vulture = client.get("/api/profiles/vulture").json()["profile"]
+        assert moved.status_code == 200
+        assert moved.json()["local_backup"].startswith("before-import-")
+        assert not any(
+            button["id"] == "landing"
+            for page in default["pages"] for button in page["buttons"]
+        )
+        vulture_flight = next(page for page in vulture["pages"] if page["id"] == "flight")
+        assert vulture_flight["buttons"][0]["id"] == "landing"
+    finally:
+        editable_config.unlink(missing_ok=True)
+
+
+def test_editor_reorders_button_in_page() -> None:
+    editable_config = Path(__file__).parent / "_buttons_reorder_test.json"
+    data = json.loads(CONFIG.read_text(encoding="utf-8"))
+    editable_config.write_text(json.dumps(data), encoding="utf-8")
+    lights = next(
+        button for button in profile_pages(data)[0]["buttons"] if button["id"] == "lights"
+    )
+    try:
+        with TestClient(create_app(editable_config, force_test_mode=True)) as client:
+            response = client.put(
+                "/api/buttons/lights",
+                json={
+                    "profile_id": "default", "target_profile_id": "default",
+                    "page_id": "flight", "position": 0, "button": lights,
+                },
+            )
+            flight = client.get("/api/profiles/default").json()["profile"]["pages"][0]
+        assert response.status_code == 200
+        assert flight["buttons"][0]["id"] == "lights"
+    finally:
+        editable_config.unlink(missing_ok=True)

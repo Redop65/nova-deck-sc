@@ -16,7 +16,7 @@
     </div>
     <div class="top-actions">
       <div class="system-state"><i id="status-dot"></i><span id="status-text">CONECTANDO</span></div>
-      <button id="open-editor" class="config-button" type="button" aria-label="Abrir editor de botones">CONFIG</button>
+      <button id="open-editor" class="config-button" type="button" aria-label="Activar modo Edit">EDIT</button>
     </div>
   </header>
 
@@ -39,6 +39,20 @@
 
       <section id="button-grid" class="button-grid" aria-live="polite"></section>
 
+      <section id="edit-toolbar" class="edit-toolbar" hidden>
+        <span>EDIT MODE // TAP A BUTTON TO MODIFY</span>
+        <button id="edit-new-button" class="action-button primary" type="button">+ NEW BUTTON</button>
+        <button id="exit-edit-mode" class="action-button" type="button">DONE</button>
+      </section>
+
+      <aside id="activity-reminder" class="activity-reminder" aria-label="Recordatorio de actividad">
+        <button id="reminder-toggle" class="reminder-toggle" type="button" aria-pressed="false">
+          <span class="reminder-lamp"></span><span>REMINDER</span>
+        </button>
+        <span id="reminder-countdown" class="reminder-countdown">OFF</span>
+        <button id="reminder-action" class="reminder-action" type="button" hidden>F2 READY</button>
+      </aside>
+
       <section class="command-monitor" aria-live="polite">
         <div class="monitor-label"><span>COMMAND BUS</span><i></i></div>
         <div id="command-log" class="command-log">
@@ -56,6 +70,14 @@
         </div>
       </header>
 
+      <section class="backup-tools" aria-label="Backup de configuración">
+        <div><small>CONFIGURATION BACKUP</small><strong>Export / Import</strong></div>
+        <span class="backup-safe">OBS password excluded</span>
+        <button id="export-backup" class="action-button" type="button">EXPORT JSON</button>
+        <button id="import-backup" class="action-button" type="button">IMPORT JSON</button>
+        <input id="backup-file" type="file" accept="application/json,.json" hidden>
+      </section>
+
       <div class="editor-layout">
         <aside class="button-catalogue">
           <div class="section-label">BUTTON CATALOGUE</div>
@@ -70,6 +92,7 @@
           <div class="form-grid">
             <label>Visible name<input id="field-name" name="name" maxlength="60" required placeholder="Open Comms"></label>
             <label>Unique ID<input id="field-id" name="id" maxlength="50" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="open-comms"></label>
+            <label>Profile<select id="field-profile" name="profile_id" required></select></label>
             <label>Page<select id="field-page" name="page_id" required></select></label>
             <label>Action type<select id="field-type" name="type">
               <option value="hotkey">Hotkey</option><option value="macro">Macro</option><option value="obs">OBS WebSocket</option>
@@ -102,6 +125,9 @@
           <label class="disabled-field"><input id="field-disabled" name="disabled" type="checkbox"><span>Keep this button disabled</span></label>
           <p class="form-help">Choose one action type. OBS actions use config/settings.json. Icons accept a short label or a local assets/icons file path.</p>
           <div class="form-footer">
+            <button id="move-up-button" class="action-button" type="button" hidden>↑ MOVE UP</button>
+            <button id="move-down-button" class="action-button" type="button" hidden>↓ MOVE DOWN</button>
+            <button id="duplicate-button" class="action-button" type="button" hidden>DUPLICATE</button>
             <button id="delete-button" class="action-button danger" type="button" hidden>DELETE</button>
             <button class="action-button primary" type="submit">SAVE TO JSON</button>
           </div>
