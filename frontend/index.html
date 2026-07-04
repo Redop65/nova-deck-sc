@@ -2,10 +2,20 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content">
   <meta name="theme-color" content="#050a10">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NOVA DECK">
+  <meta name="application-name" content="NOVA DECK">
+  <meta name="format-detection" content="telephone=no">
   <title>NOVA DECK // SC</title>
-  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/assets/icons/nova-deck.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/icons/nova-deck.svg">
+  <link rel="stylesheet" href="/assets/themes.css?v=1.1.0-afk">
+  <link rel="stylesheet" href="/assets/styles.css?v=1.1.0-afk">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -16,6 +26,8 @@
     </div>
     <div class="top-actions">
       <div class="system-state"><i id="status-dot"></i><span id="status-text">CONECTANDO</span></div>
+      <button id="fullscreen-toggle" class="config-button utility-button" type="button">FULL</button>
+      <button id="cockpit-toggle" class="config-button utility-button" type="button" aria-pressed="false">CABIN</button>
       <button id="open-editor" class="config-button" type="button" aria-label="Activar modo Edit">EDIT</button>
     </div>
   </header>
@@ -25,6 +37,16 @@
       <section class="mode-header">
         <div><small>ACTIVE MODULE</small><h1 id="page-title">—</h1></div>
         <div class="panel-controls">
+          <label class="theme-picker secondary-control">
+            <small>THEME</small>
+            <select id="theme-select" aria-label="Visual theme">
+              <option value="dark-default">Dark Default</option>
+              <option value="space-blue">Space Blue</option>
+              <option value="amber-cockpit">Amber Cockpit</option>
+              <option value="red-alert">Red Alert</option>
+              <option value="industrial-mining">Industrial Mining</option>
+            </select>
+          </label>
           <label class="profile-picker">
             <small>SHIP PROFILE</small>
             <select id="profile-select" aria-label="Ship profile"></select>
@@ -45,12 +67,11 @@
         <button id="exit-edit-mode" class="action-button" type="button">DONE</button>
       </section>
 
-      <aside id="activity-reminder" class="activity-reminder" aria-label="Recordatorio de actividad">
+      <aside id="activity-reminder" class="activity-reminder" aria-label="Modo AFK">
         <button id="reminder-toggle" class="reminder-toggle" type="button" aria-pressed="false">
-          <span class="reminder-lamp"></span><span>REMINDER</span>
+          <span class="reminder-lamp"></span><span>MODO AFK</span>
         </button>
         <span id="reminder-countdown" class="reminder-countdown">OFF</span>
-        <button id="reminder-action" class="reminder-action" type="button" hidden>F2 READY</button>
       </aside>
 
       <section class="command-monitor" aria-live="polite">
@@ -142,8 +163,8 @@
     </section>
   </main>
 
-  <nav id="page-nav" class="page-nav" aria-label="Perfiles"></nav>
+  <nav id="page-nav" class="page-nav" aria-label="Páginas"></nav>
   <div id="toast" class="toast" role="alert"></div>
-  <script src="/assets/app.js" defer></script>
+  <script src="/assets/app.js?v=1.1.0-afk" defer></script>
 </body>
 </html>

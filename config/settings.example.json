@@ -1,7 +1,8 @@
 {
   "app": {
     "debug": false,
-    "log_level": "INFO"
+    "log_level": "INFO",
+    "default_theme": "dark-default"
   },
   "obs": {
     "enabled": false,

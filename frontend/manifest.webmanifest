@@ -1,0 +1,19 @@
+{
+  "name": "NOVA DECK // SC",
+  "short_name": "NOVA DECK",
+  "description": "Panel táctil local para Star Citizen y OBS",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#05090e",
+  "theme_color": "#050a10",
+  "icons": [
+    {
+      "src": "/assets/icons/nova-deck.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

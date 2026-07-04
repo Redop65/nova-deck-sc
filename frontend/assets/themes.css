@@ -1,0 +1,85 @@
+:root,
+body[data-theme="dark-default"] {
+  --theme-bg: #05090e;
+  --theme-body-bg: radial-gradient(circle at 85% -10%, rgba(41,155,190,.12), transparent 35%), linear-gradient(#060d14f5, #03070bfd), repeating-linear-gradient(90deg, transparent 0 79px, rgba(31,91,112,.06) 80px);
+  --theme-panel: #09131d;
+  --theme-surface: #071017;
+  --theme-line: #173343;
+  --theme-text: #d7edf3;
+  --theme-muted: #668492;
+  --theme-accent: #36d8ef;
+  --theme-button-bg: #071017;
+  --theme-button-border: #102631;
+  --theme-pressed: #102832;
+  --theme-alert-bg: #3a1118;
+  --theme-alert-border: #8b303b;
+  --theme-alert-text: #ffdce0;
+}
+
+body[data-theme="space-blue"] {
+  --theme-bg: #050914;
+  --theme-body-bg: radial-gradient(circle at 78% 0, rgba(54,101,181,.18), transparent 38%), linear-gradient(#071120f7, #030712fd), repeating-linear-gradient(90deg, transparent 0 79px, rgba(68,118,184,.055) 80px);
+  --theme-panel: #0a1628;
+  --theme-surface: #081426;
+  --theme-line: #203b61;
+  --theme-text: #d9e8f8;
+  --theme-muted: #7189a8;
+  --theme-accent: #64a9e8;
+  --theme-button-bg: #09162a;
+  --theme-button-border: #183454;
+  --theme-pressed: #142d4b;
+  --theme-alert-bg: #291927;
+  --theme-alert-border: #764559;
+  --theme-alert-text: #f5dce8;
+}
+
+body[data-theme="amber-cockpit"] {
+  --theme-bg: #0d0a05;
+  --theme-body-bg: radial-gradient(circle at 82% -5%, rgba(167,105,31,.14), transparent 38%), linear-gradient(#151006f7, #080603fd), repeating-linear-gradient(90deg, transparent 0 79px, rgba(151,100,37,.05) 80px);
+  --theme-panel: #1a1409;
+  --theme-surface: #151005;
+  --theme-line: #4a3518;
+  --theme-text: #eee3cb;
+  --theme-muted: #9a8460;
+  --theme-accent: #d7a24b;
+  --theme-button-bg: #171106;
+  --theme-button-border: #4b3517;
+  --theme-pressed: #38260d;
+  --theme-alert-bg: #36160d;
+  --theme-alert-border: #87442d;
+  --theme-alert-text: #f6ded1;
+}
+
+body[data-theme="red-alert"] {
+  --theme-bg: #0d0608;
+  --theme-body-bg: radial-gradient(circle at 82% -5%, rgba(153,42,53,.16), transparent 38%), linear-gradient(#16090cf7, #070304fd), repeating-linear-gradient(90deg, transparent 0 79px, rgba(143,40,50,.05) 80px);
+  --theme-panel: #1a0c10;
+  --theme-surface: #14080b;
+  --theme-line: #50232b;
+  --theme-text: #f0dfe2;
+  --theme-muted: #9c747b;
+  --theme-accent: #ce5864;
+  --theme-button-bg: #18090d;
+  --theme-button-border: #4c2028;
+  --theme-pressed: #3c151c;
+  --theme-alert-bg: #471119;
+  --theme-alert-border: #a23d48;
+  --theme-alert-text: #ffe3e6;
+}
+
+body[data-theme="industrial-mining"] {
+  --theme-bg: #080b08;
+  --theme-body-bg: radial-gradient(circle at 80% -5%, rgba(113,123,54,.13), transparent 38%), linear-gradient(#10140cf7, #050704fd), repeating-linear-gradient(90deg, transparent 0 79px, rgba(116,123,66,.05) 80px);
+  --theme-panel: #151910;
+  --theme-surface: #11150d;
+  --theme-line: #38412a;
+  --theme-text: #e1e5d8;
+  --theme-muted: #818a6f;
+  --theme-accent: #a6a85c;
+  --theme-button-bg: #12160e;
+  --theme-button-border: #39422b;
+  --theme-pressed: #2c321d;
+  --theme-alert-bg: #332114;
+  --theme-alert-border: #80603a;
+  --theme-alert-text: #f0e1c9;
+}

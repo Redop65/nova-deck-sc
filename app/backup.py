@@ -8,6 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.config import ButtonConfig
+from app.settings import THEMES
 
 BACKUP_FORMAT = "nova-deck-backup"
 BACKUP_VERSION = 1
@@ -145,6 +146,8 @@ class BackupManager:
             "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
         }:
             raise BackupError("settings.app.log_level no es válido.")
+        if "default_theme" in app and app["default_theme"] not in THEMES:
+            raise BackupError("settings.app.default_theme no es válido.")
         if "enabled" in obs and not isinstance(obs["enabled"], bool):
             raise BackupError("settings.obs.enabled debe ser true o false.")
         try:
