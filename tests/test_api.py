@@ -105,9 +105,9 @@ def test_frontend_assets_revalidate_after_updates() -> None:
         javascript = client.get("/assets/app.js?v=test")
         stylesheet = client.get("/assets/styles.css?v=test")
         themes = client.get("/assets/themes.css?v=test")
-    assert "app.js?v=1.1.0-afk" in index.text
-    assert "styles.css?v=1.1.0-afk" in index.text
-    assert "themes.css?v=1.1.0-afk" in index.text
+    assert "app.js?v=1.2.1-afk-server" in index.text
+    assert "styles.css?v=1.2.1-afk-server" in index.text
+    assert "themes.css?v=1.2.1-afk-server" in index.text
     assert javascript.headers["cache-control"] == "no-cache, must-revalidate"
     assert stylesheet.headers["cache-control"] == "no-cache, must-revalidate"
     assert themes.headers["cache-control"] == "no-cache, must-revalidate"

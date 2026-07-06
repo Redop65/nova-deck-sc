@@ -24,17 +24,40 @@ Panel táctil local, estilo Stream Deck, para ejecutar atajos de teclado de Star
 
 ## Instalación en Windows
 
-1. Ejecuta `install.bat` una sola vez. Creará `.venv` e instalará todas las dependencias dentro del proyecto.
-2. Primero ejecuta `start-test.bat`.
-3. En el PC abre `http://localhost:8765`.
-4. Busca la IPv4 del PC con `ipconfig` (por ejemplo, `192.168.1.42`).
-5. En el celular abre `http://192.168.1.42:8765`, sustituyendo esa IP por la tuya.
-6. Prueba los botones: la consola inferior debe indicar `SIMULATED`.
-7. Cuando hayas revisado tus bindings, detén el servidor con `Ctrl+C` y usa `start.bat` para permitir la salida real de teclado.
+1. Descarga o clona el proyecto en una carpeta normal de usuario, no dentro de `C:\Windows` ni `Program Files`.
+2. Ejecuta `install.bat` con doble clic. Creará `.venv`, instalará y validará las dependencias y ofrecerá crear un acceso directo.
+3. Primero ejecuta `start-test.bat`. Este modo bloquea la inyección de teclas.
+4. El script muestra dos direcciones: `PC` y `CELULAR`. Abre la segunda desde el teléfono conectado a la misma WiFi.
+5. Prueba los botones: la consola inferior debe indicar `SIMULATED`.
+6. Detén el servidor con `Ctrl+C` y usa `start.bat` para permitir la salida real de teclado.
 
-`start.bat` muestra automáticamente la URL del PC y una URL con la IP local para el celular. `update.bat` actualiza las dependencias del entorno existente; si todavía no existe `.venv`, ejecuta primero la instalación automáticamente.
+`start.bat` valida el entorno, los módulos requeridos, la configuración básica y el puerto `8765`. Detecta la IP de la ruta de red activa, muestra claramente ambas URLs y pregunta si debe abrir el navegador del PC. También avisa si Windows considera pública la red activa.
 
-Para crear un acceso directo: clic derecho sobre `start.bat` → **Mostrar más opciones** → **Enviar a** → **Escritorio (crear acceso directo)**. Puedes renombrarlo a `NOVA DECK` y asignarle un icono desde **Propiedades**.
+Opciones útiles:
+
+```bat
+start.bat --browser       rem inicia y abre el navegador sin preguntar
+start.bat --no-browser    rem inicia sin abrir el navegador
+start.bat --test-mode     rem inicia bloqueando la salida real de teclas
+start.bat --shortcut      rem crea el acceso directo del escritorio
+start.bat --check         rem valida instalacion, red y puerto sin iniciar
+```
+
+`update.bat` actualiza y valida las dependencias del entorno existente. No descarga código nuevo desde GitHub; para eso usa GitHub Desktop o ejecuta `git pull` antes de `update.bat`.
+
+### Acceso directo de escritorio
+
+Al terminar, `install.bat` pregunta si deseas crear **NOVA DECK.lnk**. También puedes ejecutar `create-shortcut.ps1` con PowerShell o `start.bat --shortcut`. El acceso directo inicia el servidor y abre automáticamente `http://localhost:8765`.
+
+### Firewall de Windows
+
+Cuando Windows pregunte por Python, permite acceso únicamente en **Redes privadas**. Deja **Redes públicas** desmarcado. Si el aviso no aparece:
+
+1. Abre **Seguridad de Windows → Firewall y protección de red → Permitir una aplicación a través del firewall**.
+2. Busca el Python ubicado dentro de `.venv\Scripts\python.exe` y habilítalo solo para **Privada**.
+3. Como alternativa avanzada, crea una regla de entrada TCP para el puerto `8765`, limitada al perfil **Privado**.
+
+Nunca abras o reenvíes el puerto `8765` en el router y no uses DMZ.
 
 ## Uso desde el celular
 
@@ -107,7 +130,7 @@ Los bindings de Star Citizen cambian entre versiones y configuraciones personale
 
 La esquina inferior muestra una pequeña palanca **MODO AFK**. Al activarla inicia una cuenta regresiva aleatoria de 3:30 a 4:30 minutos. Al llegar a cero envía `F2` automáticamente y programa otro intervalo aleatorio. El ciclo continúa hasta que vuelvas a pulsar **MODO AFK** para apagarlo.
 
-El modo es silencioso: no vibra ni muestra notificaciones emergentes. Usa **TEST MODE** para comprobar los ciclos sin inyectar realmente `F2`. El navegador debe permanecer abierto y el PC activo para que el temporizador funcione correctamente.
+El modo es silencioso: no vibra ni muestra notificaciones emergentes. Usa **TEST MODE** para comprobar los ciclos sin inyectar realmente `F2`. El temporizador se ejecuta en el servidor de Windows: puedes apagar la pantalla del celular o cerrar su navegador y el ciclo continuará. La ventana de NOVA DECK debe permanecer abierta y el PC no debe entrar en suspensión.
 
 En Flight, **Extend / Retract Wings** usa `Alt+K` (la acción de transformación/configuración de nave). **Open All Doors** queda inicialmente deshabilitado con `F9` como atajo sugerido: primero asigna `F9` a la acción correspondiente dentro de `Advanced Controls Customization` y después habilita el botón desde **CONFIG**. No se usa una combinación basada en `O`, porque Star Citizen puede interpretarla como el comando de escudos. La cuadrícula compacta de Flight admite hasta diez botones visibles.
 
@@ -406,6 +429,7 @@ StarCitizen/
 ├── tests/
 ├── install.bat
 ├── start.bat
+├── create-shortcut.ps1
 ├── update.bat
 └── start-test.bat
 ```
@@ -461,10 +485,11 @@ También puedes iniciar con `.venv\Scripts\python.exe -m app.main --debug`. Debu
 
 ## Solución de problemas
 
-- **El celular no conecta:** confirma misma WiFi, usa la IPv4 correcta, conserva `:8765` y permite Python solo en redes privadas del Firewall.
-- **La web responde pero el juego no:** enfoca el juego, comprueba el binding y revisa que juego y servidor tengan el mismo nivel de privilegio.
-- **Error de configuración:** valida comas, comillas e IDs únicos en `config/buttons.json`; el detalle aparecerá en la interfaz/API.
-- **El puerto está ocupado:** cambia `8765` en `start.bat` y usa ese mismo puerto en la URL del celular.
-- **OBS no responde:** abre OBS, activa WebSocket, revisa puerto/contraseña y confirma que `enabled` sea `true`. Los nombres de escenas y fuentes distinguen mayúsculas.
-- **Firewall bloquea el celular:** en **Seguridad de Windows → Firewall y protección de red → Permitir una aplicación**, permite Python únicamente en redes privadas. Como alternativa avanzada, crea una regla de entrada TCP para el puerto `8765`, también solo en perfil privado.
+- **El celular no conecta:** confirma que PC y celular estén en la misma WiFi y que no sea una red de invitados con aislamiento entre dispositivos. Usa exactamente la URL `CELULAR` mostrada por `start.bat`, conserva `http://` y `:8765`, desactiva temporalmente VPNs y comprueba que la red de Windows sea privada.
+- **Puerto bloqueado u ocupado:** `start.bat` detiene el inicio si otro proceso ya escucha en `8765`. Ejecuta `netstat -ano | findstr :8765` para identificarlo. Cierra la otra instancia de NOVA DECK o cambia `PORT=8765` en `start.bat`; usa el mismo puerto en la regla privada del firewall y en la URL móvil.
+- **Firewall bloquea el celular:** permite `.venv\Scripts\python.exe` únicamente en redes privadas. No crees una regla pública. Para separar firewall de otros problemas, prueba primero `http://localhost:8765` en el PC y después la URL móvil.
+- **OBS no conecta:** abre OBS, activa **Herramientas → Configuración del servidor WebSocket**, revisa host `127.0.0.1`, puerto, contraseña y que `enabled` sea `true`. Los nombres de escenas, entradas y fuentes distinguen mayúsculas. OBS y NOVA DECK deben ejecutarse en la misma cuenta de Windows.
+- **Las hotkeys no llegan al juego:** desactiva TEST MODE, deja Star Citizen enfocado, confirma el binding dentro del juego y ejecuta juego y NOVA DECK con el mismo nivel de privilegio. Si el juego está como administrador, una app sin elevar puede no poder enviarle teclas.
+- **JSON de configuración inválido:** revisa comas, comillas, IDs duplicados y la ruta indicada por el monitor. Consulta `http://localhost:8765/api/status`; la sección `configuration` contiene el diagnóstico. Restaura un archivo desde `config/backups/` si la estructura completa quedó dañada.
+- **Faltan dependencias:** ejecuta `update.bat`. Si continúa, elimina únicamente la carpeta `.venv` y vuelve a ejecutar `install.bat`.
 - **`activate.bat` no se reconoce:** descarga la versión más reciente del repositorio y vuelve a ejecutar `install.bat`. El instalador reparará un `.venv` incompleto y nunca continuará instalando dependencias globalmente. Si Python de Microsoft Store no logra crear el entorno, instala Python 3.12 desde python.org con **Add python.exe to PATH** habilitado.
