@@ -2,19 +2,25 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 set "VENV_PY=.venv\Scripts\python.exe"
+set "PY_CMD="
 
 where py >nul 2>nul
-if errorlevel 1 (
-  echo [ERROR] Python no esta instalado o el launcher "py" no esta en PATH.
+if not errorlevel 1 set "PY_CMD=py -3"
+if not defined PY_CMD (
+  where python >nul 2>nul
+  if not errorlevel 1 set "PY_CMD=python"
+)
+if not defined PY_CMD (
+  echo [ERROR] Python no esta instalado o no esta disponible en PATH.
   echo Instala Python 3.11 o posterior desde https://www.python.org/downloads/windows/
   pause
   exit /b 1
 )
 
-py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)"
+%PY_CMD% -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)"
 if errorlevel 1 (
   echo [ERROR] NOVA DECK requiere Python 3.11 o posterior.
-  py -3 --version
+  %PY_CMD% --version
   pause
   exit /b 1
 )
@@ -23,9 +29,9 @@ if not exist "%VENV_PY%" (
   echo Creando entorno virtual local...
   if exist ".venv" (
     echo Se encontro un entorno incompleto. Intentando repararlo...
-    py -3 -m venv --clear ".venv"
+    %PY_CMD% -m venv --clear ".venv"
   ) else (
-    py -3 -m venv ".venv"
+    %PY_CMD% -m venv ".venv"
   )
   if errorlevel 1 goto :venv_error
 )
@@ -44,7 +50,21 @@ if errorlevel 1 goto :dependency_error
 if errorlevel 1 goto :dependency_error
 
 echo.
-echo Instalacion completada. Ejecuta start.bat o start-test.bat.
+echo Validando instalacion...
+"%VENV_PY%" -c "import fastapi, uvicorn, pynput, obsws_python"
+if errorlevel 1 goto :dependency_error
+
+echo.
+echo Instalacion completada correctamente.
+echo Ejecuta start-test.bat para probar sin enviar teclas.
+echo Ejecuta start.bat para usar NOVA DECK normalmente.
+echo.
+choice /C SN /N /M "Crear acceso directo NOVA DECK en el escritorio? [S/N]: "
+if errorlevel 2 goto :install_done
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0create-shortcut.ps1" -NoPrompt
+if errorlevel 1 echo [AVISO] Puedes crearlo mas tarde con: start.bat --shortcut
+
+:install_done
 pause
 exit /b 0
 

@@ -27,7 +27,7 @@ const backupFile = document.querySelector("#backup-file");
 const reminderWidget = document.querySelector("#activity-reminder");
 const reminderToggle = document.querySelector("#reminder-toggle");
 const reminderCountdown = document.querySelector("#reminder-countdown");
-const reminderState = { armed: false, dueAt: 0, interval: null, sending: false };
+const reminderState = { armed: false, poll: null };
 const fullscreenToggle = document.querySelector("#fullscreen-toggle");
 const cockpitToggle = document.querySelector("#cockpit-toggle");
 const themeSelect = document.querySelector("#theme-select");
@@ -135,70 +135,52 @@ function applyTheme(theme, persist = true) {
   if (persist) localStorage.setItem("nova-deck-theme", selected);
 }
 
-function randomReminderDelay() {
-  return 210000 + Math.floor(Math.random() * 60001);
+async function toggleActivityReminder() {
+  reminderToggle.disabled = true;
+  try {
+    const result = await requestJson("/api/afk", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        enabled: !reminderState.armed,
+        test_mode: testToggle.checked,
+      }),
+    });
+    renderAfkStatus(result);
+    writeLog(
+      result.enabled
+        ? `AFK MODE ENABLED ON PC // ${result.test_mode ? "SIMULATION" : "AUTOMATIC F2"}`
+        : "AFK MODE DISABLED // AUTOMATIC CYCLE STOPPED",
+      result.enabled ? "success" : "",
+    );
+  } catch (error) {
+    writeLog(`AFK MODE ERROR // ${error.message}`, "error");
+    showToast(error.message);
+  } finally {
+    reminderToggle.disabled = false;
+  }
 }
 
-function toggleActivityReminder() {
-  if (reminderState.armed) stopActivityReminder();
-  else startActivityReminder();
-}
-
-function startActivityReminder() {
-  reminderState.armed = true;
-  reminderState.sending = false;
-  reminderState.dueAt = Date.now() + randomReminderDelay();
-  reminderWidget.classList.add("armed");
-  reminderToggle.setAttribute("aria-pressed", "true");
-  clearInterval(reminderState.interval);
-  reminderState.interval = setInterval(updateReminderCountdown, 1000);
-  writeLog("AFK MODE ENABLED // AUTOMATIC F2 CYCLE ARMED", "success");
-  updateReminderCountdown();
-}
-
-function stopActivityReminder() {
-  clearInterval(reminderState.interval);
-  Object.assign(reminderState, { armed: false, dueAt: 0, interval: null, sending: false });
-  reminderWidget.classList.remove("armed");
-  reminderToggle.setAttribute("aria-pressed", "false");
-  reminderCountdown.textContent = "OFF";
-  writeLog("AFK MODE DISABLED // AUTOMATIC CYCLE STOPPED");
-}
-
-function updateReminderCountdown() {
-  if (!reminderState.armed) return;
-  const remaining = Math.max(0, reminderState.dueAt - Date.now());
-  if (remaining === 0 && !reminderState.sending) void sendReminderKey();
-  const totalSeconds = Math.ceil(remaining / 1000);
+function renderAfkStatus(status) {
+  reminderState.armed = Boolean(status.enabled);
+  reminderWidget.classList.toggle("armed", reminderState.armed);
+  reminderToggle.setAttribute("aria-pressed", String(reminderState.armed));
+  if (!reminderState.armed) {
+    reminderCountdown.textContent = "OFF";
+    return;
+  }
+  const totalSeconds = Math.max(0, Number(status.next_in_seconds) || 0);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = String(totalSeconds % 60).padStart(2, "0");
   reminderCountdown.textContent = `${minutes}:${seconds}`;
+  if (status.last_error) writeLog(`AFK MODE ERROR // ${status.last_error}`, "error");
 }
 
-async function sendReminderKey() {
-  if (!reminderState.armed || reminderState.sending) return;
-  reminderState.sending = true;
-  reminderCountdown.textContent = "F2";
+async function syncAfkStatus() {
   try {
-    const result = await requestJson("/api/commands", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        profile_id: "default", button_id: "star-map", test_mode: testToggle.checked,
-      }),
-    });
-    writeLog(
-      `AFK MODE // F2 ${result.test_mode ? "SIMULATED" : "SENT"} // NEXT CYCLE ARMED`,
-      "success",
-    );
+    renderAfkStatus(await requestJson("/api/afk"));
   } catch (error) {
-    writeLog(`AFK MODE ERROR // ${error.message} // RETRY CYCLE ARMED`, "error");
-  } finally {
-    if (reminderState.armed) {
-      reminderState.sending = false;
-      reminderState.dueAt = Date.now() + randomReminderDelay();
-      updateReminderCountdown();
-    }
+    if (reminderState.armed) writeLog(`AFK STATUS ERROR // ${error.message}`, "error");
   }
 }
 
@@ -773,6 +755,9 @@ async function boot() {
       : (state.profiles.find((profile) => profile.id === "default")?.id || state.profiles[0]?.id);
     if (!initialProfile) throw new Error("No hay perfiles configurados.");
     await loadProfile(initialProfile);
+    await syncAfkStatus();
+    clearInterval(reminderState.poll);
+    reminderState.poll = setInterval(syncAfkStatus, 1000);
   } catch (error) {
     setConnection("error", "OFFLINE");
     writeLog(`BOOT ERROR // ${error.message}`, "error");

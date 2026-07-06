@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import socket
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -13,15 +14,16 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
+from app.afk import AfkController
 from app.backup import BackupError, BackupManager
 from app.config import ButtonConfig
 from app.keyboard import KeyboardSender, parse_combo
-from app.models import ButtonInput, ButtonMutation, CommandRequest
+from app.models import AfkRequest, ButtonInput, ButtonMutation, CommandRequest
 from app.obs import ObsController, ObsError
 from app.settings import load_app_settings
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.1"
 LOGGER = logging.getLogger("nova_deck")
 
 
@@ -65,11 +67,19 @@ def create_app(
     )
     LOGGER.setLevel(getattr(logging, log_level))
     # Debug aumenta los logs, pero no expone tracebacks HTTP a la red local.
-    app = FastAPI(title="Star Citizen Deck", version=APP_VERSION, debug=False)
+    @asynccontextmanager
+    async def lifespan(app_instance: FastAPI):
+        yield
+        app_instance.state.afk.stop()
+
+    app = FastAPI(
+        title="Star Citizen Deck", version=APP_VERSION, debug=False, lifespan=lifespan
+    )
     buttons_path = config_path or ROOT / "config" / "buttons.json"
     app.state.config = ButtonConfig(buttons_path)
     app.state.backup = BackupManager(buttons_path, settings_path, APP_VERSION)
     app.state.keyboard = KeyboardSender()
+    app.state.afk = AfkController(app.state.keyboard.send, logger=LOGGER)
     app.state.obs = ObsController(settings_path)
     app.state.force_test_mode = force_test_mode
     app.state.debug_mode = debug
@@ -314,6 +324,20 @@ def create_app(
             "hold_ms": action.hold_ms,
             "test_mode": is_test,
         }
+
+    @app.get("/api/afk")
+    def afk_status(request: Request) -> dict:
+        return {"ok": True, **request.app.state.afk.status()}
+
+    @app.put("/api/afk")
+    def set_afk(payload: AfkRequest, request: Request) -> dict:
+        if payload.enabled:
+            status = request.app.state.afk.start(
+                test_mode=payload.test_mode or request.app.state.force_test_mode
+            )
+        else:
+            status = request.app.state.afk.stop()
+        return {"ok": True, **status}
 
     frontend = ROOT / "frontend"
     app.mount(

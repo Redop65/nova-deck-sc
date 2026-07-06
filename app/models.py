@@ -12,6 +12,11 @@ class CommandRequest(BaseModel):
     test_mode: bool = False
 
 
+class AfkRequest(BaseModel):
+    enabled: bool
+    test_mode: bool = False
+
+
 class MacroStep(BaseModel):
     keys: str = Field(min_length=1, max_length=50)
     hold_ms: int = Field(default=0, ge=0, le=5000)
