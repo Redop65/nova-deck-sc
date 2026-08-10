@@ -9,13 +9,15 @@ ALIASES = {
     "ALT": "alt",
     # AltGr is exposed by pynput as a separate key. Star Citizen commonly
     # labels the Spanish Ñ key as a semicolon, so both need explicit handling.
-    "ALTGR": "alt_gr",
-    "ALT_GR": "alt_gr",
-    "ALT GR": "alt_gr",
-    "ALTRIGHT": "alt_gr",
-    "ALT_RIGHT": "alt_gr",
-    "RIGHTALT": "alt_gr",
-    "RIGHT ALT": "alt_gr",
+    # Key.alt_r sets the Windows extended-key flag. Key.alt_gr has the same
+    # virtual key but omits that flag, which some games read as left Alt.
+    "ALTGR": "alt_r",
+    "ALT_GR": "alt_r",
+    "ALT GR": "alt_r",
+    "ALTRIGHT": "alt_r",
+    "ALT_RIGHT": "alt_r",
+    "RIGHTALT": "alt_r",
+    "RIGHT ALT": "alt_r",
     "CTRL": "ctrl",
     "CONTROL": "ctrl",
     "SHIFT": "shift",
@@ -41,12 +43,11 @@ ALIASES = {
     "RIGHT": "right",
 }
 
-# Character aliases are intentionally kept apart from ALIASES: they are sent
-# as literal characters, not looked up as members of pynput.keyboard.Key.
-# Star Citizen displays the physical Spanish Ñ key as ";" in its bindings.
-CHARACTER_ALIASES = {
-    "Ñ": ";",
-    "SEMICOLON": ";",
+# Star Citizen reads the physical US-semicolon position (scan code 0x27)
+# instead of the localized character. On Spanish keyboards that position is Ñ.
+PHYSICAL_KEY_ALIASES = {
+    "Ñ": ("oem_semicolon", 0x27),
+    "SEMICOLON": ("oem_semicolon", 0x27),
 }
 
 
@@ -54,6 +55,7 @@ CHARACTER_ALIASES = {
 class ParsedKey:
     name: str
     is_special: bool
+    scan_code: int | None = None
 
 
 def parse_combo(combo: str) -> list[ParsedKey]:
@@ -68,8 +70,9 @@ def parse_combo(combo: str) -> list[ParsedKey]:
         upper = raw.upper()
         if upper in ALIASES:
             parsed.append(ParsedKey(ALIASES[upper], True))
-        elif upper in CHARACTER_ALIASES:
-            parsed.append(ParsedKey(CHARACTER_ALIASES[upper], False))
+        elif upper in PHYSICAL_KEY_ALIASES:
+            name, scan_code = PHYSICAL_KEY_ALIASES[upper]
+            parsed.append(ParsedKey(name, False, scan_code))
         elif upper.startswith("F") and upper[1:].isdigit() and 1 <= int(upper[1:]) <= 24:
             parsed.append(ParsedKey(upper.lower(), True))
         elif len(raw) == 1:
@@ -100,13 +103,18 @@ class KeyboardSender:
     def _send_locked(combo: str, hold_ms: int = 0) -> None:
         parsed = parse_combo(combo)
         try:
-            from pynput.keyboard import Controller, Key
+            from pynput.keyboard import Controller, Key, KeyCode
         except ImportError as exc:
             raise RuntimeError("pynput no está instalado.") from exc
 
         keys = []
         for item in parsed:
-            if item.is_special:
+            if item.scan_code is not None:
+                # KEYEVENTF_SCANCODE (0x0008) makes SendInput use the physical
+                # key position. VK_OEM_1 is supplied only as descriptive data;
+                # Windows ignores it while the scan-code flag is present.
+                keys.append(KeyCode.from_vk(0xBA, _scan=item.scan_code, _flags=0x0008))
+            elif item.is_special:
                 try:
                     keys.append(getattr(Key, item.name))
                 except AttributeError as exc:

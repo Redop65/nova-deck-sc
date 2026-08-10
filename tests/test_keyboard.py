@@ -10,8 +10,9 @@ def test_parses_simple_key() -> None:
 def test_parses_combo_and_aliases() -> None:
     assert parse_combo("Ctrl + F12") == [ParsedKey("ctrl", True), ParsedKey("f12", True)]
     assert parse_combo("Alt+N") == [ParsedKey("alt", True), ParsedKey("n", False)]
-    assert parse_combo("AltGr+Ñ") == [ParsedKey("alt_gr", True), ParsedKey(";", False)]
-    assert parse_combo("AltRight+Semicolon") == [ParsedKey("alt_gr", True), ParsedKey(";", False)]
+    physical_semicolon = ParsedKey("oem_semicolon", False, 0x27)
+    assert parse_combo("AltGr+Ñ") == [ParsedKey("alt_r", True), physical_semicolon]
+    assert parse_combo("AltRight+Semicolon") == [ParsedKey("alt_r", True), physical_semicolon]
 
 
 @pytest.mark.parametrize("combo", ["", "Ctrl+", "Mouse4", "F25", "not-a-key"])

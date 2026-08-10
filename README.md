@@ -294,7 +294,7 @@ Teclas aceptadas: letras y dígitos individuales, `F1` a `F24`, `Ctrl`, `Alt`, `
 
 ### Teclado español y AltGr
 
-Para un binding que Star Citizen muestra como `AltGr + ;` debido a su compatibilidad limitada con el teclado español, escribe `AltGr+Ñ` en NOVA DECK. La app lo envía como **Alt derecho + punto y coma**. También se acepta `AltRight+Semicolon`; no uses `Ctrl+Alt+Ñ` para este caso.
+Para un binding que Star Citizen muestra como `AltGr + ;` debido a su compatibilidad limitada con el teclado español, escribe `AltGr+Ñ` en NOVA DECK. La app envía **Alt derecho extendido + la posición física de Semicolon (scan code 0x27)**, que corresponde a la tecla Ñ del teclado español. También se acepta `AltRight+Semicolon`; no uses `Ctrl+Alt+Ñ` para este caso.
 
 Quantum Drive incluye `"hold_ms": 1000`, por lo que mantiene `B` presionada durante un segundo antes de soltarla. Esta duración también puede modificarse desde **CONFIG**.
 
