@@ -9,13 +9,15 @@ ALIASES = {
     "ALT": "alt",
     # AltGr is exposed by pynput as a separate key. Star Citizen commonly
     # labels the Spanish Ñ key as a semicolon, so both need explicit handling.
-    "ALTGR": "alt_gr",
-    "ALT_GR": "alt_gr",
-    "ALT GR": "alt_gr",
-    "ALTRIGHT": "alt_gr",
-    "ALT_RIGHT": "alt_gr",
-    "RIGHTALT": "alt_gr",
-    "RIGHT ALT": "alt_gr",
+    # Key.alt_r sets the Windows extended-key flag. Key.alt_gr has the same
+    # virtual key but omits that flag, which some games read as left Alt.
+    "ALTGR": "alt_r",
+    "ALT_GR": "alt_r",
+    "ALT GR": "alt_r",
+    "ALTRIGHT": "alt_r",
+    "ALT_RIGHT": "alt_r",
+    "RIGHTALT": "alt_r",
+    "RIGHT ALT": "alt_r",
     "CTRL": "ctrl",
     "CONTROL": "ctrl",
     "SHIFT": "shift",
