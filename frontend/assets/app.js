@@ -218,7 +218,9 @@ function moduleDetails(page) {
 }
 
 function renderTelemetry(page) {
-  if (!page) return;
+  // Keep the deck usable if the browser has cached an older index.html while
+  // it already received a newer app.js. The telemetry panel is desktop-only.
+  if (!page || !telemetryProfile || !telemetryModule || !telemetryButtons || !telemetryMode) return;
   const profile = state.profiles.find((item) => item.id === state.activeProfile);
   telemetryProfile.textContent = (profile?.name || state.activeProfile || "—").toUpperCase();
   telemetryModule.textContent = page.name.toUpperCase();
@@ -275,8 +277,10 @@ function selectPage(pageId) {
   if (!page) return;
   title.textContent = page.name;
   const details = moduleDetails(page);
-  moduleId.textContent = details.code;
-  pageSubtitle.textContent = details.subtitle;
+  // These fields were introduced after the original module header. Guarding
+  // them avoids blocking button rendering during a mixed cached deployment.
+  if (moduleId) moduleId.textContent = details.code;
+  if (pageSubtitle) pageSubtitle.textContent = details.subtitle;
   grid.classList.toggle("flight-compact", page.id === "flight");
   grid.replaceChildren(...page.buttons.map(createDeckButton));
   grid.classList.remove("page-enter");
