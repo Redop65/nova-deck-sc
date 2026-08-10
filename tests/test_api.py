@@ -106,7 +106,7 @@ def test_frontend_assets_revalidate_after_updates() -> None:
         stylesheet = client.get("/assets/styles.css?v=test")
         themes = client.get("/assets/themes.css?v=test")
     assert "app.js?v=1.2.3-ui-boot" in index.text
-    assert "styles.css?v=1.2.3-ui-boot" in index.text
+    assert "styles.css?v=1.2.5-compact-layout" in index.text
     assert "themes.css?v=1.2.3-ui-boot" in index.text
     assert javascript.headers["cache-control"] == "no-cache, must-revalidate"
     assert stylesheet.headers["cache-control"] == "no-cache, must-revalidate"

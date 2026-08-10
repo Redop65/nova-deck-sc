@@ -16,12 +16,13 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { background: var(--bg); overflow-x: hidden; }
+html { min-height: 100%; background: var(--bg); overflow-x: hidden; overflow-y: auto; }
 body {
   margin: 0;
   max-width: 100%;
   overflow-x: hidden;
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--text);
   background:
     radial-gradient(ellipse at 50% -20%, color-mix(in srgb, var(--cyan) 10%, transparent), transparent 47%),
@@ -30,7 +31,8 @@ body {
   letter-spacing: .04em;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
-  overscroll-behavior: none;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: auto;
   user-select: none;
 }
 body::before {
@@ -341,6 +343,32 @@ body.cockpit-mode .button-grid { gap: 10px; }
 @media (orientation: landscape) and (min-width: 721px) and (max-height: 700px) {
   body.cockpit-mode .button-grid,
   body.cockpit-mode .button-grid.flight-compact { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+/* Small landscape screens need a dedicated scroll area: the fixed page bar
+   must never hide a second row of deck buttons. */
+@media (orientation: landscape) and (max-height: 640px) {
+  html, body { height: 100%; min-height: 100%; }
+  body { height: 100dvh; min-height: 100dvh; overflow: hidden; }
+  .topbar { height: 52px; }
+  main {
+    height: calc(100dvh - 52px);
+    min-height: calc(100dvh - 52px);
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 12px calc(96px + var(--safe-bottom));
+  }
+  .mode-header { margin-bottom: 9px; }
+  h1 { margin-top: 4px; font-size: clamp(22px, 4vw, 31px); }
+  #page-subtitle { margin-top: 3px; font-size: 8px; }
+  .button-grid, .button-grid.flight-compact { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .deck-button, .flight-compact .deck-button { min-height: clamp(76px, 18dvh, 98px); padding: 11px 10px; }
+  .flight-compact .key-icon, .key-icon { font-size: clamp(17px, 3vw, 23px); }
+  .custom-icon, .flight-compact .custom-icon { width: 36px; height: 36px; }
+  .key-name, .flight-compact .key-name { left: 10px; right: 10px; bottom: 25px; font-size: 8px; }
+  .key-binding, .flight-compact .key-binding { left: 10px; bottom: 9px; font-size: 8px; }
+  .command-monitor { margin-top: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
