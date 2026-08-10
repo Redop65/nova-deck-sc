@@ -11,6 +11,8 @@ const customIconPattern = /^assets\/icons\/[A-Za-z0-9][A-Za-z0-9._-]*\.(svg|png|
 const grid = document.querySelector("#button-grid");
 const nav = document.querySelector("#page-nav");
 const title = document.querySelector("#page-title");
+const pageSubtitle = document.querySelector("#page-subtitle");
+const moduleId = document.querySelector("#module-id");
 const testToggle = document.querySelector("#test-mode");
 const profileSelect = document.querySelector("#profile-select");
 const log = document.querySelector("#command-log");
@@ -31,6 +33,10 @@ const reminderState = { armed: false, poll: null };
 const fullscreenToggle = document.querySelector("#fullscreen-toggle");
 const cockpitToggle = document.querySelector("#cockpit-toggle");
 const themeSelect = document.querySelector("#theme-select");
+const telemetryProfile = document.querySelector("#telemetry-profile");
+const telemetryModule = document.querySelector("#telemetry-module");
+const telemetryButtons = document.querySelector("#telemetry-buttons");
+const telemetryMode = document.querySelector("#telemetry-mode");
 
 document.querySelector("#open-editor").addEventListener("click", toggleDeckEditMode);
 document.querySelector("#close-editor").addEventListener("click", () => setEditorMode(false));
@@ -81,6 +87,8 @@ testToggle.checked = localStorage.getItem("nova-deck-test") === "true";
 testToggle.addEventListener("change", () => {
   localStorage.setItem("nova-deck-test", testToggle.checked);
   writeLog(testToggle.checked ? "TEST MODE ENABLED // KEY OUTPUT BLOCKED" : "LIVE MODE ENABLED // KEY OUTPUT ARMED");
+  const activePage = state.pages.find((page) => page.id === state.activePage);
+  renderTelemetry(activePage);
 });
 applyCockpitMode(localStorage.getItem("nova-deck-cockpit") === "true", false);
 updateFullscreenControl();
@@ -188,6 +196,34 @@ function setConnection(kind, text) {
   const wrapper = document.querySelector(".system-state");
   wrapper.className = `system-state ${kind}`;
   document.querySelector("#status-text").textContent = text;
+  const telemetryState = document.querySelector("#telemetry-state");
+  if (telemetryState) telemetryState.textContent = kind === "online" ? "ONLINE" : text;
+}
+
+function moduleDetails(page) {
+  const descriptions = {
+    flight: "VEHICLE CONTROL / FLIGHT SYSTEMS",
+    combat: "TACTICAL CONTROL / WEAPON SYSTEMS",
+    mining: "RESOURCE CONTROL / EXTRACTION SYSTEMS",
+    salvage: "RESOURCE CONTROL / SALVAGE SYSTEMS",
+    fps: "PERSONAL CONTROL / FIELD SYSTEMS",
+    mobiglas: "PERSONAL INTERFACE / NAVIGATION",
+    camera: "CAPTURE CONTROL / OBS SYSTEMS",
+  };
+  const sequence = Math.max(1, state.pages.findIndex((item) => item.id === page.id) + 1);
+  return {
+    code: `MOD-${String(sequence).padStart(2, "0")}`,
+    subtitle: descriptions[page.id] || "TACTICAL CONTROL MATRIX",
+  };
+}
+
+function renderTelemetry(page) {
+  if (!page) return;
+  const profile = state.profiles.find((item) => item.id === state.activeProfile);
+  telemetryProfile.textContent = (profile?.name || state.activeProfile || "—").toUpperCase();
+  telemetryModule.textContent = page.name.toUpperCase();
+  telemetryButtons.textContent = String(page.buttons.length).padStart(2, "0");
+  telemetryMode.textContent = testToggle.checked || state.forceTestMode ? "TEST" : "LIVE";
 }
 
 function renderNav() {
@@ -238,8 +274,15 @@ function selectPage(pageId) {
   const page = state.pages.find((item) => item.id === pageId);
   if (!page) return;
   title.textContent = page.name;
+  const details = moduleDetails(page);
+  moduleId.textContent = details.code;
+  pageSubtitle.textContent = details.subtitle;
   grid.classList.toggle("flight-compact", page.id === "flight");
   grid.replaceChildren(...page.buttons.map(createDeckButton));
+  grid.classList.remove("page-enter");
+  void grid.offsetWidth;
+  grid.classList.add("page-enter");
+  renderTelemetry(page);
   renderNav();
 }
 
@@ -648,10 +691,12 @@ function setFormMessage(message, type = "") {
 function createDeckButton(item, index) {
   const button = document.createElement("button");
   const color = colors.has(item.color) ? item.color : "cyan";
-  button.className = `deck-button ${color}`;
+  const type = actionType(item);
+  button.className = `deck-button ${color} action-${type}`;
   button.type = "button";
   button.disabled = Boolean(item.disabled) && !state.deckEditMode;
   button.dataset.index = String(index + 1).padStart(2, "0");
+  button.style.setProperty("--card-index", String(Math.min(index, 7)));
   button.title = item._config_error || (item.disabled ? "Configura una acción válida para habilitar este botón" : item.name);
 
   let icon = null;
@@ -700,7 +745,8 @@ function createDeckButton(item, index) {
 }
 
 async function sendCommand(item, element) {
-  element.classList.add("firing");
+  element.classList.remove("success", "error");
+  element.classList.add("firing", "active");
   navigator.vibrate?.(25);
   const outgoing = actionType(item) === "obs" ? `OBS · ${item.obsAction}` : (item.macro ? `MACRO ×${item.macro.length}` : item.keys);
   writeLog(`TX // ${item.name.toUpperCase()} [${outgoing}]`);
@@ -716,6 +762,7 @@ async function sendCommand(item, element) {
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
+    element.classList.add("success");
     const mode = body.test_mode ? "SIMULATED" : "SENT";
     if (body.action_type === "macro") {
       writeLog(`ACK // ${body.button.toUpperCase()} // MACRO ${body.steps} STEPS // ${mode}`, "success");
@@ -727,10 +774,11 @@ async function sendCommand(item, element) {
       writeLog(`ACK // ${body.button.toUpperCase()} // ${body.keys}${hold} // ${mode}`, "success");
     }
   } catch (error) {
+    element.classList.add("error");
     writeLog(`ERROR // ${error.message}`, "error");
     showToast(error.message);
   } finally {
-    setTimeout(() => element.classList.remove("firing"), 140);
+    setTimeout(() => element.classList.remove("firing", "active", "success", "error"), 230);
   }
 }
 

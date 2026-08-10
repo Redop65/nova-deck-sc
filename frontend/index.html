@@ -14,8 +14,8 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/assets/icons/nova-deck.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/icons/nova-deck.svg">
-  <link rel="stylesheet" href="/assets/themes.css?v=1.2.1-afk-server">
-  <link rel="stylesheet" href="/assets/styles.css?v=1.2.1-afk-server">
+  <link rel="stylesheet" href="/assets/themes.css?v=1.2.2-visual-polish">
+  <link rel="stylesheet" href="/assets/styles.css?v=1.2.2-visual-polish">
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -35,7 +35,11 @@
   <main>
     <section id="deck-view">
       <section class="mode-header">
-        <div><small>ACTIVE MODULE</small><h1 id="page-title">—</h1></div>
+        <div class="module-heading">
+          <div class="module-kicker"><i></i><small>ACTIVE MODULE</small><span id="module-id">MOD-00</span></div>
+          <h1 id="page-title">—</h1>
+          <p id="page-subtitle">TACTICAL CONTROL MATRIX</p>
+        </div>
         <div class="panel-controls">
           <label class="theme-picker secondary-control">
             <small>THEME</small>
@@ -80,6 +84,17 @@
           <span class="prompt">&gt;</span><span id="log-text">SYSTEM READY // AWAITING INPUT</span>
         </div>
       </section>
+
+      <aside class="system-panel" aria-label="Telemetría local del panel">
+        <div class="system-panel-header"><small>SYSTEM TELEMETRY</small><span id="telemetry-state">ONLINE</span></div>
+        <dl class="system-metrics">
+          <div><dt>PROFILE</dt><dd id="telemetry-profile">—</dd></div>
+          <div><dt>MODULE</dt><dd id="telemetry-module">—</dd></div>
+          <div><dt>BUTTONS</dt><dd id="telemetry-buttons">0</dd></div>
+          <div><dt>MODE</dt><dd id="telemetry-mode">LIVE</dd></div>
+        </dl>
+        <p>LOCAL LINK<br>PRIVATE NETWORK</p>
+      </aside>
     </section>
 
     <section id="editor-view" class="editor-view" hidden>
@@ -165,6 +180,6 @@
 
   <nav id="page-nav" class="page-nav" aria-label="Páginas"></nav>
   <div id="toast" class="toast" role="alert"></div>
-  <script src="/assets/app.js?v=1.2.1-afk-server" defer></script>
+  <script src="/assets/app.js?v=1.2.2-visual-polish" defer></script>
 </body>
 </html>

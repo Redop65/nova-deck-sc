@@ -290,7 +290,11 @@ Añádelo dentro de la lista `buttons` de la página deseada. Campos:
 | `hold_ms` | Milisegundos que la tecla permanece presionada, entre `0` y `5000`. |
 | `disabled` | Opcional. Con `true`, muestra el botón pero impide ejecutarlo. |
 
-Teclas aceptadas: letras y dígitos individuales, `F1` a `F24`, `Ctrl`, `Alt`, `Shift`, `Win`, `Enter`, `Esc`, `Space`, `Tab`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown` y flechas. Por ejemplo: `Shift+F4` o `Ctrl+Alt+K`.
+Teclas aceptadas: letras y dígitos individuales, `F1` a `F24`, `Ctrl`, `Alt`, `AltGr`, `AltRight`, `Shift`, `Win`, `Enter`, `Esc`, `Space`, `Tab`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown` y flechas. Por ejemplo: `Shift+F4` o `Ctrl+Alt+K`.
+
+### Teclado español y AltGr
+
+Para un binding que Star Citizen muestra como `AltGr + ;` debido a su compatibilidad limitada con el teclado español, escribe `AltGr+Ñ` en NOVA DECK. La app lo envía como **Alt derecho + punto y coma**. También se acepta `AltRight+Semicolon`; no uses `Ctrl+Alt+Ñ` para este caso.
 
 Quantum Drive incluye `"hold_ms": 1000`, por lo que mantiene `B` presionada durante un segundo antes de soltarla. Esta duración también puede modificarse desde **CONFIG**.
 

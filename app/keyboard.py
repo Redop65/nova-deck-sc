@@ -7,6 +7,15 @@ from time import sleep
 
 ALIASES = {
     "ALT": "alt",
+    # AltGr is exposed by pynput as a separate key. Star Citizen commonly
+    # labels the Spanish Ñ key as a semicolon, so both need explicit handling.
+    "ALTGR": "alt_gr",
+    "ALT_GR": "alt_gr",
+    "ALT GR": "alt_gr",
+    "ALTRIGHT": "alt_gr",
+    "ALT_RIGHT": "alt_gr",
+    "RIGHTALT": "alt_gr",
+    "RIGHT ALT": "alt_gr",
     "CTRL": "ctrl",
     "CONTROL": "ctrl",
     "SHIFT": "shift",
@@ -32,6 +41,14 @@ ALIASES = {
     "RIGHT": "right",
 }
 
+# Character aliases are intentionally kept apart from ALIASES: they are sent
+# as literal characters, not looked up as members of pynput.keyboard.Key.
+# Star Citizen displays the physical Spanish Ñ key as ";" in its bindings.
+CHARACTER_ALIASES = {
+    "Ñ": ";",
+    "SEMICOLON": ";",
+}
+
 
 @dataclass(frozen=True)
 class ParsedKey:
@@ -51,6 +68,8 @@ def parse_combo(combo: str) -> list[ParsedKey]:
         upper = raw.upper()
         if upper in ALIASES:
             parsed.append(ParsedKey(ALIASES[upper], True))
+        elif upper in CHARACTER_ALIASES:
+            parsed.append(ParsedKey(CHARACTER_ALIASES[upper], False))
         elif upper.startswith("F") and upper[1:].isdigit() and 1 <= int(upper[1:]) <= 24:
             parsed.append(ParsedKey(upper.lower(), True))
         elif len(raw) == 1:
