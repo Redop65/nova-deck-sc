@@ -5,7 +5,8 @@
     "default_theme": "dark-default"
   },
   "afk": {
-    "interval_seconds": 240
+    "min_interval_seconds": 180,
+    "max_interval_seconds": 300
   },
   "obs": {
     "enabled": false,

@@ -18,7 +18,14 @@ class AfkRequest(BaseModel):
 
 
 class AfkSettingsRequest(BaseModel):
-    interval_seconds: int = Field(ge=60, le=1800)
+    min_interval_seconds: int = Field(ge=60, le=1800)
+    max_interval_seconds: int = Field(ge=60, le=1800)
+
+    @model_validator(mode="after")
+    def valid_range(self) -> Self:
+        if self.min_interval_seconds > self.max_interval_seconds:
+            raise ValueError("El mínimo del rango AFK no puede ser mayor que el máximo.")
+        return self
 
 
 class MacroStep(BaseModel):

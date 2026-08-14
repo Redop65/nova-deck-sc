@@ -8,7 +8,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.config import ButtonConfig
-from app.settings import THEMES
+from app.settings import MAX_AFK_INTERVAL_SECONDS, MIN_AFK_INTERVAL_SECONDS, THEMES
 
 BACKUP_FORMAT = "nova-deck-backup"
 BACKUP_VERSION = 1
@@ -166,9 +166,26 @@ class BackupManager:
         if "interval_seconds" in afk and (
             isinstance(afk["interval_seconds"], bool)
             or not isinstance(afk["interval_seconds"], int)
-            or not 60 <= afk["interval_seconds"] <= 1800
+            or not MIN_AFK_INTERVAL_SECONDS <= afk["interval_seconds"] <= MAX_AFK_INTERVAL_SECONDS
         ):
             raise BackupError("settings.afk.interval_seconds debe estar entre 60 y 1800.")
+        has_minimum = "min_interval_seconds" in afk
+        has_maximum = "max_interval_seconds" in afk
+        if has_minimum != has_maximum:
+            raise BackupError("settings.afk requiere min_interval_seconds y max_interval_seconds juntos.")
+        if has_minimum:
+            minimum = afk["min_interval_seconds"]
+            maximum = afk["max_interval_seconds"]
+            if (
+                isinstance(minimum, bool) or isinstance(maximum, bool)
+                or not isinstance(minimum, int) or not isinstance(maximum, int)
+                or not MIN_AFK_INTERVAL_SECONDS <= minimum <= MAX_AFK_INTERVAL_SECONDS
+                or not MIN_AFK_INTERVAL_SECONDS <= maximum <= MAX_AFK_INTERVAL_SECONDS
+                or minimum > maximum
+            ):
+                raise BackupError(
+                    "settings.afk.min_interval_seconds y max_interval_seconds deben estar entre 60 y 1800 y en orden."
+                )
 
     def _read_settings(self) -> dict[str, Any]:
         if not self.settings_path.exists():

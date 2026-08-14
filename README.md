@@ -128,19 +128,20 @@ Los bindings de Star Citizen cambian entre versiones y configuraciones personale
 
 ### Recordatorio de actividad
 
-La esquina inferior muestra una pequeña palanca **MODO AFK**. Al activarla inicia una cuenta regresiva aleatoria alrededor del intervalo elegido. Al llegar a cero envía `F2` automáticamente y programa otro intervalo aleatorio. El ciclo continúa hasta que vuelvas a pulsar **MODO AFK** para apagarlo.
+La esquina inferior muestra una pequeña palanca **MODO AFK**. Al activarla inicia una cuenta regresiva aleatoria. Al llegar a cero envía `F2` automáticamente y programa otro tiempo aleatorio. El ciclo continúa hasta que vuelvas a pulsar **MODO AFK** para apagarlo.
 
-Junto a la palanca puedes escribir el intervalo promedio entre **1 y 30 minutos**. El valor se guarda de inmediato en `config/settings.json` y, si el modo ya está activo, el siguiente ciclo se programa usando el nuevo valor. NOVA DECK conserva una variación aleatoria de ±30 segundos para que el ciclo no sea idéntico cada vez.
+Junto a la palanca puedes escribir un rango entre **1 y 30 minutos**. Por ejemplo, `1-3` hace que cada ciclo elija un tiempo distinto entre 1 y 3 minutos; `4` usa siempre 4 minutos. El rango se guarda de inmediato en `config/settings.json` y, si el modo ya está activo, el siguiente ciclo se programa usando el nuevo rango.
 
 También puedes configurarlo manualmente en `config/settings.json` (reinicia el servidor después de editar el archivo):
 
 ```json
 "afk": {
-  "interval_seconds": 240
+  "min_interval_seconds": 60,
+  "max_interval_seconds": 180
 }
 ```
 
-`240` equivale a 4 minutos. El valor permitido está entre `60` y `1800` segundos.
+El ejemplo equivale a `1-3` minutos. Ambos valores deben estar entre `60` y `1800` segundos y el mínimo no puede superar al máximo. Las configuraciones antiguas con `"interval_seconds"` siguen funcionando: se interpretan con la variación previa de ±30 segundos hasta que guardes un rango nuevo desde la app.
 
 El modo es silencioso: no vibra ni muestra notificaciones emergentes. Usa **TEST MODE** para comprobar los ciclos sin inyectar realmente `F2`. El temporizador se ejecuta en el servidor de Windows: puedes apagar la pantalla del celular o cerrar su navegador y el ciclo continuará. La ventana de NOVA DECK debe permanecer abierta y el PC no debe entrar en suspensión.
 

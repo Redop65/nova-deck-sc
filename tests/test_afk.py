@@ -45,12 +45,13 @@ def test_afk_test_mode_cycles_without_sending_key() -> None:
     assert status["last_run"] is not None
 
 
-def test_afk_interval_can_be_reconfigured() -> None:
+def test_afk_range_can_be_reconfigured() -> None:
     controller = AfkController(lambda key: None)
-    status = controller.configure_interval(600)
+    status = controller.configure_range(60, 180)
 
-    assert status["interval_seconds"] == 600
-    assert status["jitter_seconds"] == 30
+    assert status["min_delay_seconds"] == 60
+    assert status["max_delay_seconds"] == 180
+    assert status["interval_seconds"] == 120
 
 
 def test_afk_api_can_start_report_and_stop() -> None:
@@ -76,10 +77,13 @@ def test_afk_api_saves_interval_in_settings(tmp_path: Path) -> None:
     settings.write_text(json.dumps({"app": {}, "obs": {}}), encoding="utf-8")
 
     with TestClient(create_app(buttons, force_test_mode=True, settings_path=settings)) as client:
-        response = client.put("/api/afk/settings", json={"interval_seconds": 600})
+        response = client.put("/api/afk/settings", json={"min_interval_seconds": 60, "max_interval_seconds": 180})
         status = client.get("/api/afk")
 
     assert response.status_code == 200
-    assert response.json()["interval_seconds"] == 600
-    assert status.json()["interval_seconds"] == 600
-    assert json.loads(settings.read_text(encoding="utf-8"))["afk"]["interval_seconds"] == 600
+    assert response.json()["min_delay_seconds"] == 60
+    assert response.json()["max_delay_seconds"] == 180
+    assert status.json()["interval_seconds"] == 120
+    assert json.loads(settings.read_text(encoding="utf-8"))["afk"] == {
+        "min_interval_seconds": 60, "max_interval_seconds": 180,
+    }

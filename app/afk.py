@@ -17,13 +17,11 @@ class AfkController:
         *,
         min_delay_seconds: float = 210,
         max_delay_seconds: float = 270,
-        jitter_seconds: float = 30,
         logger: logging.Logger | None = None,
     ) -> None:
         self._send_key = send_key
         self._min_delay = min_delay_seconds
         self._max_delay = max_delay_seconds
-        self._jitter_seconds = jitter_seconds
         self._logger = logger or logging.getLogger("nova_deck.afk")
         self._lock = Lock()
         self._wake = Event()
@@ -65,16 +63,24 @@ class AfkController:
         with self._lock:
             return self._status_locked()
 
-    def configure_interval(self, interval_seconds: int) -> dict:
-        if not 60 <= interval_seconds <= 1800:
-            raise ValueError("El intervalo AFK debe estar entre 60 y 1800 segundos.")
+    def configure_range(self, min_delay_seconds: int, max_delay_seconds: int) -> dict:
+        if not 60 <= min_delay_seconds <= 1800 or not 60 <= max_delay_seconds <= 1800:
+            raise ValueError("El rango AFK debe estar entre 60 y 1800 segundos.")
+        if min_delay_seconds > max_delay_seconds:
+            raise ValueError("El mínimo del rango AFK no puede ser mayor que el máximo.")
         with self._lock:
-            self._min_delay = max(1, interval_seconds - self._jitter_seconds)
-            self._max_delay = interval_seconds + self._jitter_seconds
+            self._min_delay = min_delay_seconds
+            self._max_delay = max_delay_seconds
             if self._enabled:
                 self._schedule_locked()
                 self._wake.set()
             return self._status_locked()
+
+    def configure_interval(self, interval_seconds: int) -> dict:
+        """Compatibility helper for callers using the pre-range average setting."""
+        return self.configure_range(
+            max(60, interval_seconds - 30), min(1800, interval_seconds + 30)
+        )
 
     def _status_locked(self) -> dict:
         remaining = max(0, int(round(self._next_run - monotonic()))) if self._enabled else 0
@@ -84,8 +90,10 @@ class AfkController:
             "next_in_seconds": remaining,
             "last_run": self._last_run,
             "last_error": self._last_error,
+            "min_delay_seconds": int(round(self._min_delay)),
+            "max_delay_seconds": int(round(self._max_delay)),
             "interval_seconds": int(round((self._min_delay + self._max_delay) / 2)),
-            "jitter_seconds": int(round(self._jitter_seconds)),
+            "jitter_seconds": int(round((self._max_delay - self._min_delay) / 2)),
         }
 
     def _schedule_locked(self) -> None:

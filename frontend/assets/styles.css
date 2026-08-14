@@ -160,7 +160,7 @@ body.deck-editing .deck-button::after { content: "EDIT"; position: absolute; top
 .reminder-lamp { width: 7px; height: 7px; border: 1px solid #4c6972; border-radius: 50%; background: #18282f; }
 .activity-reminder.armed .reminder-lamp { border-color: #55e69b; background: #55e69b; box-shadow: 0 0 9px rgba(85,230,155,.65); }
 .reminder-interval { display: flex; align-items: center; gap: 4px; padding-left: 7px; border-left: 1px solid #23404b; color: #78919b; font: 8px Consolas, monospace; letter-spacing: .06em; }
-.reminder-interval input { width: 33px; min-height: 25px; padding: 2px; color: #c5e8f1; border: 1px solid #31505b; border-radius: 0; outline: none; background: #071017; font: 9px Consolas, monospace; text-align: center; }
+.reminder-interval input { width: 44px; min-height: 25px; padding: 2px; color: #c5e8f1; border: 1px solid #31505b; border-radius: 0; outline: none; background: #071017; font: 9px Consolas, monospace; text-align: center; }
 .reminder-interval input:focus { border-color: var(--cyan); box-shadow: 0 0 8px color-mix(in srgb, var(--cyan) 28%, transparent); }
 .reminder-interval input:disabled { opacity: .55; }
 .reminder-countdown { min-width: 35px; color: #8db4c1; font: 9px Consolas, monospace; text-align: center; }

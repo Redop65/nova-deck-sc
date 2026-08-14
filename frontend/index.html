@@ -75,9 +75,9 @@
         <button id="reminder-toggle" class="reminder-toggle" type="button" aria-pressed="false">
           <span class="reminder-lamp"></span><span>MODO AFK</span>
         </button>
-        <label class="reminder-interval" title="Intervalo promedio del ciclo AFK">
-          <span>INT</span>
-          <input id="reminder-interval" type="number" min="1" max="30" step="0.5" inputmode="decimal" aria-label="Intervalo AFK en minutos">
+        <label class="reminder-interval" title="Rango aleatorio del ciclo AFK, por ejemplo 1-3 minutos">
+          <span>RNG</span>
+          <input id="reminder-interval" type="text" inputmode="decimal" placeholder="3-5" autocomplete="off" aria-label="Rango AFK en minutos; por ejemplo 1-3">
           <span>MIN</span>
         </label>
         <span id="reminder-countdown" class="reminder-countdown">OFF</span>
@@ -185,6 +185,6 @@
 
   <nav id="page-nav" class="page-nav" aria-label="Páginas"></nav>
   <div id="toast" class="toast" role="alert"></div>
-  <script src="/assets/app.js?v=1.2.6-afk-interval" defer></script>
+  <script src="/assets/app.js?v=1.2.7-afk-range" defer></script>
 </body>
 </html>

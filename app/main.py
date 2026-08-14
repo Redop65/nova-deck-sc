@@ -20,7 +20,7 @@ from app.config import ButtonConfig
 from app.keyboard import KeyboardSender, parse_combo
 from app.models import AfkRequest, AfkSettingsRequest, ButtonInput, ButtonMutation, CommandRequest
 from app.obs import ObsController, ObsError
-from app.settings import load_app_settings, save_afk_interval
+from app.settings import load_app_settings, save_afk_range
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_VERSION = "1.2.1"
@@ -82,8 +82,8 @@ def create_app(
     app.state.keyboard = KeyboardSender()
     app.state.afk = AfkController(
         app.state.keyboard.send,
-        min_delay_seconds=runtime.afk_interval_seconds - 30,
-        max_delay_seconds=runtime.afk_interval_seconds + 30,
+        min_delay_seconds=runtime.afk_min_delay_seconds,
+        max_delay_seconds=runtime.afk_max_delay_seconds,
         logger=LOGGER,
     )
     app.state.obs = ObsController(settings_path)
@@ -349,13 +349,21 @@ def create_app(
     def set_afk_settings(payload: AfkSettingsRequest, request: Request) -> dict:
         try:
             safety_backup = request.app.state.backup.create_local_backup()
-            save_afk_interval(settings_path, payload.interval_seconds)
-            status = request.app.state.afk.configure_interval(payload.interval_seconds)
+            save_afk_range(
+                settings_path, payload.min_interval_seconds, payload.max_interval_seconds
+            )
+            status = request.app.state.afk.configure_range(
+                payload.min_interval_seconds, payload.max_interval_seconds
+            )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-        LOGGER.info("Intervalo AFK actualizado a %s segundos", payload.interval_seconds)
+        LOGGER.info(
+            "Rango AFK actualizado a %s-%s segundos",
+            payload.min_interval_seconds,
+            payload.max_interval_seconds,
+        )
         return {"ok": True, "local_backup": safety_backup, **status}
 
     frontend = ROOT / "frontend"
