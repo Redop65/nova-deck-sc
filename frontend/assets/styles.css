@@ -159,6 +159,10 @@ body.deck-editing .deck-button::after { content: "EDIT"; position: absolute; top
 .reminder-toggle { display: flex; align-items: center; gap: 6px; padding: 7px 8px; }
 .reminder-lamp { width: 7px; height: 7px; border: 1px solid #4c6972; border-radius: 50%; background: #18282f; }
 .activity-reminder.armed .reminder-lamp { border-color: #55e69b; background: #55e69b; box-shadow: 0 0 9px rgba(85,230,155,.65); }
+.reminder-interval { display: flex; align-items: center; gap: 4px; padding-left: 7px; border-left: 1px solid #23404b; color: #78919b; font: 8px Consolas, monospace; letter-spacing: .06em; }
+.reminder-interval input { width: 44px; min-height: 25px; padding: 2px; color: #c5e8f1; border: 1px solid #31505b; border-radius: 0; outline: none; background: #071017; font: 9px Consolas, monospace; text-align: center; }
+.reminder-interval input:focus { border-color: var(--cyan); box-shadow: 0 0 8px color-mix(in srgb, var(--cyan) 28%, transparent); }
+.reminder-interval input:disabled { opacity: .55; }
 .reminder-countdown { min-width: 35px; color: #8db4c1; font: 9px Consolas, monospace; text-align: center; }
 .flight-compact .deck-button { min-height: 118px; padding: 14px 12px 13px; }
 .flight-compact .key-icon { font-size: clamp(19px, 3vw, 25px); }
@@ -328,6 +332,8 @@ body.cockpit-mode .button-grid { gap: 10px; }
   .top-actions { gap: 9px; }
   .config-button { padding-inline: 8px; }
   .activity-reminder { bottom: calc(74px + env(safe-area-inset-bottom)); }
+  .reminder-interval { gap: 3px; padding-left: 5px; }
+  .reminder-interval > span:first-child { display: none; }
   .delete-confirm { align-items: stretch; flex-wrap: wrap; }
   .delete-confirm span { width: 100%; }
 }

@@ -4,6 +4,10 @@
     "log_level": "INFO",
     "default_theme": "dark-default"
   },
+  "afk": {
+    "min_interval_seconds": 180,
+    "max_interval_seconds": 300
+  },
   "obs": {
     "enabled": false,
     "host": "127.0.0.1",

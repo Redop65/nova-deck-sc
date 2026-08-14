@@ -18,9 +18,9 @@ from app.afk import AfkController
 from app.backup import BackupError, BackupManager
 from app.config import ButtonConfig
 from app.keyboard import KeyboardSender, parse_combo
-from app.models import AfkRequest, ButtonInput, ButtonMutation, CommandRequest
+from app.models import AfkRequest, AfkSettingsRequest, ButtonInput, ButtonMutation, CommandRequest
 from app.obs import ObsController, ObsError
-from app.settings import load_app_settings
+from app.settings import load_app_settings, save_afk_range
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_VERSION = "1.2.1"
@@ -56,8 +56,9 @@ def create_app(
     config_path: Path | None = None,
     force_test_mode: bool = False,
     debug_override: bool | None = None,
+    settings_path: Path | None = None,
 ) -> FastAPI:
-    settings_path = ROOT / "config" / "settings.json"
+    settings_path = settings_path or ROOT / "config" / "settings.json"
     runtime = load_app_settings(settings_path)
     debug = runtime.debug if debug_override is None else debug_override
     log_level = "DEBUG" if debug else runtime.log_level
@@ -79,7 +80,12 @@ def create_app(
     app.state.config = ButtonConfig(buttons_path)
     app.state.backup = BackupManager(buttons_path, settings_path, APP_VERSION)
     app.state.keyboard = KeyboardSender()
-    app.state.afk = AfkController(app.state.keyboard.send, logger=LOGGER)
+    app.state.afk = AfkController(
+        app.state.keyboard.send,
+        min_delay_seconds=runtime.afk_min_delay_seconds,
+        max_delay_seconds=runtime.afk_max_delay_seconds,
+        logger=LOGGER,
+    )
     app.state.obs = ObsController(settings_path)
     app.state.force_test_mode = force_test_mode
     app.state.debug_mode = debug
@@ -338,6 +344,27 @@ def create_app(
         else:
             status = request.app.state.afk.stop()
         return {"ok": True, **status}
+
+    @app.put("/api/afk/settings")
+    def set_afk_settings(payload: AfkSettingsRequest, request: Request) -> dict:
+        try:
+            safety_backup = request.app.state.backup.create_local_backup()
+            save_afk_range(
+                settings_path, payload.min_interval_seconds, payload.max_interval_seconds
+            )
+            status = request.app.state.afk.configure_range(
+                payload.min_interval_seconds, payload.max_interval_seconds
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+        LOGGER.info(
+            "Rango AFK actualizado a %s-%s segundos",
+            payload.min_interval_seconds,
+            payload.max_interval_seconds,
+        )
+        return {"ok": True, "local_backup": safety_backup, **status}
 
     frontend = ROOT / "frontend"
     app.mount(

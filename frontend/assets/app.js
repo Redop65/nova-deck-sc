@@ -29,7 +29,8 @@ const backupFile = document.querySelector("#backup-file");
 const reminderWidget = document.querySelector("#activity-reminder");
 const reminderToggle = document.querySelector("#reminder-toggle");
 const reminderCountdown = document.querySelector("#reminder-countdown");
-const reminderState = { armed: false, poll: null };
+const reminderInterval = document.querySelector("#reminder-interval");
+const reminderState = { armed: false, minIntervalSeconds: 210, maxIntervalSeconds: 270, poll: null };
 const fullscreenToggle = document.querySelector("#fullscreen-toggle");
 const cockpitToggle = document.querySelector("#cockpit-toggle");
 const themeSelect = document.querySelector("#theme-select");
@@ -58,6 +59,7 @@ document.querySelector("#export-backup").addEventListener("click", exportBackup)
 document.querySelector("#import-backup").addEventListener("click", () => backupFile.click());
 backupFile.addEventListener("change", importBackup);
 reminderToggle.addEventListener("click", toggleActivityReminder);
+reminderInterval.addEventListener("change", saveActivityInterval);
 fullscreenToggle.addEventListener("click", toggleFullscreen);
 cockpitToggle.addEventListener("click", () => applyCockpitMode(!state.cockpitMode));
 themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
@@ -169,8 +171,75 @@ async function toggleActivityReminder() {
   }
 }
 
+function intervalMinutesLabel(intervalSeconds) {
+  const minutes = Math.max(1, Number(intervalSeconds) || 240) / 60;
+  return Number.isInteger(minutes) ? String(minutes) : minutes.toFixed(1);
+}
+
+function intervalRangeLabel(minIntervalSeconds, maxIntervalSeconds) {
+  const minimum = intervalMinutesLabel(minIntervalSeconds);
+  const maximum = intervalMinutesLabel(maxIntervalSeconds);
+  return minimum === maximum ? minimum : `${minimum}-${maximum}`;
+}
+
+function parseAfkRange(value) {
+  const match = String(value).trim().replace(",", ".")
+    .match(/^(\d+(?:\.\d+)?)(?:\s*[-\u2013]\s*(\d+(?:\.\d+)?))?$/);
+  if (!match) return null;
+  const minimum = Number(match[1]);
+  const maximum = Number(match[2] || match[1]);
+  if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum < 1 || maximum > 30 || minimum > maximum) return null;
+  return {
+    minIntervalSeconds: Math.round(minimum * 60),
+    maxIntervalSeconds: Math.round(maximum * 60),
+  };
+}
+
+async function saveActivityInterval() {
+  const range = parseAfkRange(reminderInterval.value);
+  if (!range) {
+    reminderInterval.value = intervalRangeLabel(
+      reminderState.minIntervalSeconds, reminderState.maxIntervalSeconds,
+    );
+    showToast("Usa un rango entre 1 y 30 minutos, por ejemplo 1-3");
+    return;
+  }
+  reminderInterval.disabled = true;
+  try {
+    const result = await requestJson("/api/afk/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        min_interval_seconds: range.minIntervalSeconds,
+        max_interval_seconds: range.maxIntervalSeconds,
+      }),
+    });
+    renderAfkStatus(result);
+    const label = intervalRangeLabel(result.min_delay_seconds, result.max_delay_seconds);
+    writeLog(`AFK RANGE SET // ${label} MIN`, "success");
+    showToast("Rango AFK guardado");
+  } catch (error) {
+    reminderInterval.value = intervalRangeLabel(
+      reminderState.minIntervalSeconds, reminderState.maxIntervalSeconds,
+    );
+    writeLog(`AFK RANGE ERROR // ${error.message}`, "error");
+    showToast(error.message);
+  } finally {
+    reminderInterval.disabled = false;
+  }
+}
+
 function renderAfkStatus(status) {
   reminderState.armed = Boolean(status.enabled);
+  reminderState.minIntervalSeconds = Number(status.min_delay_seconds)
+    || reminderState.minIntervalSeconds;
+  reminderState.maxIntervalSeconds = Number(status.max_delay_seconds)
+    || reminderState.maxIntervalSeconds;
+  if (document.activeElement !== reminderInterval) {
+    reminderInterval.value = intervalRangeLabel(
+      reminderState.minIntervalSeconds, reminderState.maxIntervalSeconds,
+    );
+  }
   reminderWidget.classList.toggle("armed", reminderState.armed);
   reminderToggle.setAttribute("aria-pressed", String(reminderState.armed));
   if (!reminderState.armed) {
