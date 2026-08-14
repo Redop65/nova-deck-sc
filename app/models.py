@@ -17,6 +17,10 @@ class AfkRequest(BaseModel):
     test_mode: bool = False
 
 
+class AfkSettingsRequest(BaseModel):
+    interval_seconds: int = Field(ge=60, le=1800)
+
+
 class MacroStep(BaseModel):
     keys: str = Field(min_length=1, max_length=50)
     hold_ms: int = Field(default=0, ge=0, le=5000)

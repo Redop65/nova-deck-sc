@@ -138,8 +138,9 @@ class BackupManager:
     def _validate_settings(settings: dict[str, Any]) -> None:
         app = settings.get("app", {})
         obs = settings.get("obs", {})
-        if not isinstance(app, dict) or not isinstance(obs, dict):
-            raise BackupError("settings.app y settings.obs deben ser objetos.")
+        afk = settings.get("afk", {})
+        if not isinstance(app, dict) or not isinstance(obs, dict) or not isinstance(afk, dict):
+            raise BackupError("settings.app, settings.obs y settings.afk deben ser objetos.")
         if "debug" in app and not isinstance(app["debug"], bool):
             raise BackupError("settings.app.debug debe ser true o false.")
         if "log_level" in app and str(app["log_level"]).upper() not in {
@@ -162,6 +163,12 @@ class BackupManager:
         for field in ("host", "password"):
             if field in obs and not isinstance(obs[field], str):
                 raise BackupError(f"settings.obs.{field} debe ser texto.")
+        if "interval_seconds" in afk and (
+            isinstance(afk["interval_seconds"], bool)
+            or not isinstance(afk["interval_seconds"], int)
+            or not 60 <= afk["interval_seconds"] <= 1800
+        ):
+            raise BackupError("settings.afk.interval_seconds debe estar entre 60 y 1800.")
 
     def _read_settings(self) -> dict[str, Any]:
         if not self.settings_path.exists():

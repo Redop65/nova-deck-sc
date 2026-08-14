@@ -17,14 +17,16 @@ class AfkController:
         *,
         min_delay_seconds: float = 210,
         max_delay_seconds: float = 270,
+        jitter_seconds: float = 30,
         logger: logging.Logger | None = None,
     ) -> None:
         self._send_key = send_key
         self._min_delay = min_delay_seconds
         self._max_delay = max_delay_seconds
+        self._jitter_seconds = jitter_seconds
         self._logger = logger or logging.getLogger("nova_deck.afk")
         self._lock = Lock()
-        self._stop = Event()
+        self._wake = Event()
         self._thread: Thread | None = None
         self._enabled = False
         self._test_mode = False
@@ -40,7 +42,7 @@ class AfkController:
             self._test_mode = test_mode
             self._last_error = None
             self._schedule_locked()
-            self._stop.clear()
+            self._wake.clear()
             self._thread = Thread(target=self._run, name="nova-deck-afk", daemon=True)
             self._thread.start()
             status = self._status_locked()
@@ -51,7 +53,7 @@ class AfkController:
         with self._lock:
             self._enabled = False
             self._next_run = 0.0
-            self._stop.set()
+            self._wake.set()
             thread = self._thread
             self._thread = None
         if thread and thread is not current_thread():
@@ -63,6 +65,17 @@ class AfkController:
         with self._lock:
             return self._status_locked()
 
+    def configure_interval(self, interval_seconds: int) -> dict:
+        if not 60 <= interval_seconds <= 1800:
+            raise ValueError("El intervalo AFK debe estar entre 60 y 1800 segundos.")
+        with self._lock:
+            self._min_delay = max(1, interval_seconds - self._jitter_seconds)
+            self._max_delay = interval_seconds + self._jitter_seconds
+            if self._enabled:
+                self._schedule_locked()
+                self._wake.set()
+            return self._status_locked()
+
     def _status_locked(self) -> dict:
         remaining = max(0, int(round(self._next_run - monotonic()))) if self._enabled else 0
         return {
@@ -71,6 +84,8 @@ class AfkController:
             "next_in_seconds": remaining,
             "last_run": self._last_run,
             "last_error": self._last_error,
+            "interval_seconds": int(round((self._min_delay + self._max_delay) / 2)),
+            "jitter_seconds": int(round(self._jitter_seconds)),
         }
 
     def _schedule_locked(self) -> None:
@@ -82,8 +97,9 @@ class AfkController:
                 if not self._enabled:
                     return
                 delay = max(0, self._next_run - monotonic())
-            if self._stop.wait(delay):
-                return
+            if self._wake.wait(delay):
+                self._wake.clear()
+                continue
 
             try:
                 with self._lock:

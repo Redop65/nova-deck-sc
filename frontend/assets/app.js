@@ -29,7 +29,8 @@ const backupFile = document.querySelector("#backup-file");
 const reminderWidget = document.querySelector("#activity-reminder");
 const reminderToggle = document.querySelector("#reminder-toggle");
 const reminderCountdown = document.querySelector("#reminder-countdown");
-const reminderState = { armed: false, poll: null };
+const reminderInterval = document.querySelector("#reminder-interval");
+const reminderState = { armed: false, intervalSeconds: 240, poll: null };
 const fullscreenToggle = document.querySelector("#fullscreen-toggle");
 const cockpitToggle = document.querySelector("#cockpit-toggle");
 const themeSelect = document.querySelector("#theme-select");
@@ -58,6 +59,7 @@ document.querySelector("#export-backup").addEventListener("click", exportBackup)
 document.querySelector("#import-backup").addEventListener("click", () => backupFile.click());
 backupFile.addEventListener("change", importBackup);
 reminderToggle.addEventListener("click", toggleActivityReminder);
+reminderInterval.addEventListener("change", saveActivityInterval);
 fullscreenToggle.addEventListener("click", toggleFullscreen);
 cockpitToggle.addEventListener("click", () => applyCockpitMode(!state.cockpitMode));
 themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
@@ -169,8 +171,44 @@ async function toggleActivityReminder() {
   }
 }
 
+function intervalMinutesLabel(intervalSeconds) {
+  const minutes = Math.max(1, Number(intervalSeconds) || 240) / 60;
+  return Number.isInteger(minutes) ? String(minutes) : minutes.toFixed(1);
+}
+
+async function saveActivityInterval() {
+  const minutes = Number(reminderInterval.value);
+  if (!Number.isFinite(minutes) || minutes < 1 || minutes > 30) {
+    reminderInterval.value = intervalMinutesLabel(reminderState.intervalSeconds);
+    showToast("El intervalo AFK debe estar entre 1 y 30 minutos");
+    return;
+  }
+  const intervalSeconds = Math.round(minutes * 60);
+  reminderInterval.disabled = true;
+  try {
+    const result = await requestJson("/api/afk/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ interval_seconds: intervalSeconds }),
+    });
+    renderAfkStatus(result);
+    writeLog(`AFK INTERVAL SET // ${intervalMinutesLabel(result.interval_seconds)} MIN`, "success");
+    showToast("Intervalo AFK guardado");
+  } catch (error) {
+    reminderInterval.value = intervalMinutesLabel(reminderState.intervalSeconds);
+    writeLog(`AFK INTERVAL ERROR // ${error.message}`, "error");
+    showToast(error.message);
+  } finally {
+    reminderInterval.disabled = false;
+  }
+}
+
 function renderAfkStatus(status) {
   reminderState.armed = Boolean(status.enabled);
+  reminderState.intervalSeconds = Number(status.interval_seconds) || reminderState.intervalSeconds;
+  if (document.activeElement !== reminderInterval) {
+    reminderInterval.value = intervalMinutesLabel(reminderState.intervalSeconds);
+  }
   reminderWidget.classList.toggle("armed", reminderState.armed);
   reminderToggle.setAttribute("aria-pressed", String(reminderState.armed));
   if (!reminderState.armed) {

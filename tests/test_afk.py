@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from threading import Event
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -43,6 +45,14 @@ def test_afk_test_mode_cycles_without_sending_key() -> None:
     assert status["last_run"] is not None
 
 
+def test_afk_interval_can_be_reconfigured() -> None:
+    controller = AfkController(lambda key: None)
+    status = controller.configure_interval(600)
+
+    assert status["interval_seconds"] == 600
+    assert status["jitter_seconds"] == 30
+
+
 def test_afk_api_can_start_report_and_stop() -> None:
     app = create_app(force_test_mode=True)
     with TestClient(app) as client:
@@ -56,3 +66,20 @@ def test_afk_api_can_start_report_and_stop() -> None:
     assert started.json()["test_mode"] is True
     assert current.json()["next_in_seconds"] > 0
     assert stopped.json()["enabled"] is False
+
+
+def test_afk_api_saves_interval_in_settings(tmp_path: Path) -> None:
+    root = Path(__file__).resolve().parents[1]
+    buttons = tmp_path / "buttons.json"
+    settings = tmp_path / "settings.json"
+    buttons.write_text((root / "config" / "buttons.json").read_text(encoding="utf-8"), encoding="utf-8")
+    settings.write_text(json.dumps({"app": {}, "obs": {}}), encoding="utf-8")
+
+    with TestClient(create_app(buttons, force_test_mode=True, settings_path=settings)) as client:
+        response = client.put("/api/afk/settings", json={"interval_seconds": 600})
+        status = client.get("/api/afk")
+
+    assert response.status_code == 200
+    assert response.json()["interval_seconds"] == 600
+    assert status.json()["interval_seconds"] == 600
+    assert json.loads(settings.read_text(encoding="utf-8"))["afk"]["interval_seconds"] == 600

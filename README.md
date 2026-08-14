@@ -128,7 +128,19 @@ Los bindings de Star Citizen cambian entre versiones y configuraciones personale
 
 ### Recordatorio de actividad
 
-La esquina inferior muestra una pequeña palanca **MODO AFK**. Al activarla inicia una cuenta regresiva aleatoria de 3:30 a 4:30 minutos. Al llegar a cero envía `F2` automáticamente y programa otro intervalo aleatorio. El ciclo continúa hasta que vuelvas a pulsar **MODO AFK** para apagarlo.
+La esquina inferior muestra una pequeña palanca **MODO AFK**. Al activarla inicia una cuenta regresiva aleatoria alrededor del intervalo elegido. Al llegar a cero envía `F2` automáticamente y programa otro intervalo aleatorio. El ciclo continúa hasta que vuelvas a pulsar **MODO AFK** para apagarlo.
+
+Junto a la palanca puedes escribir el intervalo promedio entre **1 y 30 minutos**. El valor se guarda de inmediato en `config/settings.json` y, si el modo ya está activo, el siguiente ciclo se programa usando el nuevo valor. NOVA DECK conserva una variación aleatoria de ±30 segundos para que el ciclo no sea idéntico cada vez.
+
+También puedes configurarlo manualmente en `config/settings.json` (reinicia el servidor después de editar el archivo):
+
+```json
+"afk": {
+  "interval_seconds": 240
+}
+```
+
+`240` equivale a 4 minutos. El valor permitido está entre `60` y `1800` segundos.
 
 El modo es silencioso: no vibra ni muestra notificaciones emergentes. Usa **TEST MODE** para comprobar los ciclos sin inyectar realmente `F2`. El temporizador se ejecuta en el servidor de Windows: puedes apagar la pantalla del celular o cerrar su navegador y el ciclo continuará. La ventana de NOVA DECK debe permanecer abierta y el PC no debe entrar en suspensión.
 
